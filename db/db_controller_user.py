@@ -3,8 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from api.api_objects import UserCreate, UserUpdate, AdminUserUpdate
 from db.db_models import Users
+from api.user_auth import hash_password, verify_password
 
-ENGINE = create_async_engine("postgresql+asyncpg://postgres:1101@localhost:5432/uni_gather")
+ENGINE = create_async_engine("postgresql+asyncpg://postgres:0000@localhost:5432/uni_gather")
 SESSION = async_sessionmaker(ENGINE, expire_on_commit=False)
 
 async def db_add_user(user: UserCreate):
@@ -13,7 +14,7 @@ async def db_add_user(user: UserCreate):
             new_user = Users(
                 name=user.name,
                 email=user.email,
-                password_hash=user.password,
+                password_hash= hash_password(user.password),
                 role=user.role
             )
             session.add(new_user)
@@ -51,4 +52,32 @@ async def db_get_users(name: Optional[str] = None, email: Optional[str] = None, 
 
         result = await session.execute(stmt)
         return result.scalars().all()
+    
+
+async def db_get_user_by_id(id: int) -> Optional[Users]:
+    async with SESSION() as session:
+        stmt = select(Users).where(Users.id == id)
+        result = await session.execute(stmt)
+        return result.scalars().first()
+    
+
+async def db_delete_user(id: int) -> bool:
+    async with SESSION() as session:
+        async with session.begin():
+            user_to_delete = await session.get(Users, id)
+            if user_to_delete:
+                await session.delete(user_to_delete)
+                await session.commit()
+                return True
+            return False
+        
+
+async def db_login_user(email: str, password: str) -> Optional[Users]:
+    async with SESSION() as session:
+        stmt = select(Users).where(Users.email == email)
+        result = await session.execute(stmt)
+        user = result.scalars().first()
+        if user and verify_password(password, user.password_hash):
+            return user
+        return None
         

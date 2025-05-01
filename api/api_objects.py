@@ -5,7 +5,7 @@ from datetime import datetime
 class UserBaseModel(BaseModel):
     name: str
     email: str
-    role : Literal["admin", "user", "org"]
+    role : Literal["admin", "student", "org"]
 
 class UserCreate(UserBaseModel):
     password: str
