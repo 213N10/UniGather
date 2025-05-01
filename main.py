@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-
+from db.db_controller import db_get_users, db_add_user, db_add_user
+from api.api_objects import UserCreate
 
 
 app = FastAPI()
@@ -13,14 +14,16 @@ async def health_check():
 
 @app.get("/users")
 async def get_users():
-    return {"users": ["user1", "user2", "user3"]}
+    result = await db_get_users()
+    return result 
+    
 
 @app.get("/users/{user_id}")
 async def get_user(user_id: int):
     return {"user": f"user{user_id}"}
 
 @app.post("/users")
-async def create_user(user: dict):
+async def create_user(user: UserCreate):
     return {"message": "User created", "user": user}
 
 @app.put("/users/{user_id}")
