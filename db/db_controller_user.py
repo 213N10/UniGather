@@ -5,7 +5,7 @@ from api.api_objects import UserCreate, UserUpdate, AdminUserUpdate
 from db.db_models import Users
 from api.user_auth import hash_password, verify_password
 
-ENGINE = create_async_engine("postgresql+asyncpg://postgres:0000@localhost:5432/uni_gather")
+ENGINE = create_async_engine("postgresql+asyncpg://postgres:1101@localhost:5432/uni_gather")
 SESSION = async_sessionmaker(ENGINE, expire_on_commit=False)
 
 async def db_add_user(user: UserCreate):
@@ -17,6 +17,11 @@ async def db_add_user(user: UserCreate):
                 password_hash= hash_password(user.password),
                 role=user.role
             )
+            user_exists = await session.execute(
+                select(Users).where(Users.email == user.email)
+            )
+            if user_exists.scalars().first():
+                return None
             session.add(new_user)
             await session.commit()
             return new_user.id 
@@ -31,9 +36,8 @@ async def db_update_user(user: UserUpdate, id: int) -> bool:
                 if user.email:
                     user_to_update.email = user.email
                 if user.password:
-                    user_to_update.password_hash = user.password
-                if user.role:
-                    user_to_update.role = user.role
+                    user_to_update.password_hash = hash_password(user.password)
+               
                 await session.commit()
                 return True
             return False
