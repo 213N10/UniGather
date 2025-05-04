@@ -5,7 +5,7 @@ from api.api_objects import UserCreate, UserUpdate, AdminUserUpdate
 from db.db_models import Users
 from api.user_auth import hash_password, verify_password
 
-ENGINE = create_async_engine("postgresql+asyncpg://postgres:1101@localhost:5432/uni_gather")
+ENGINE = create_async_engine("postgresql+asyncpg://postgres:0000@localhost:5432/uni_gather")
 SESSION = async_sessionmaker(ENGINE, expire_on_commit=False)
 
 async def db_add_user(user: UserCreate):
