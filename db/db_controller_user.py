@@ -1,50 +1,50 @@
 from typing import List, Optional
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from api.api_objects import UserCreate, UserUpdate, AdminUserUpdate
 from db.db_models import Users
 from api.user_auth import hash_password, verify_password
 
-ENGINE = create_async_engine("postgresql+asyncpg://postgres:0000@localhost:5432/uni_gather")
-SESSION = async_sessionmaker(ENGINE, expire_on_commit=False)
 
-async def db_add_user(user: UserCreate):
-    async with SESSION() as session:
-        async with session.begin():
-            new_user = Users(
-                name=user.name,
-                email=user.email,
-                password_hash= hash_password(user.password),
-                role=user.role
-            )
-            user_exists = await session.execute(
-                select(Users).where(Users.email == user.email)
-            )
-            if user_exists.scalars().first():
-                return None
-            session.add(new_user)
-            await session.commit()
-            return new_user.id 
+class UserController:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def add_user(self, user: UserCreate) -> Optional[int]:
+        result = await self.db.execute(
+            select(Users).where(Users.email == user.email)
+        )
+        if result.scalars().first():
+            return None
+
+        new_user = Users(
+            name=user.name,
+            email=user.email,
+            password_hash=hash_password(user.password),
+            role=user.role
+        )
+        self.db.add(new_user)
+        await self.db.commit()
+        await self.db.refresh(new_user)
+        return new_user.id
         
-async def db_update_user(user: UserUpdate, id: int) -> bool:
-    async with SESSION() as session:
-        async with session.begin():
-            user_to_update = await session.get(Users, id)
-            if user_to_update:
-                if user.name:
-                    user_to_update.name = user.name
-                if user.email:
-                    user_to_update.email = user.email
-                if user.password:
-                    user_to_update.password_hash = hash_password(user.password)
-               
-                await session.commit()
-                return True
+    async def update_user(self, id: int, user: UserUpdate) -> bool:
+        user_to_update = await self.db.get(Users, id)
+        if not user_to_update:
             return False
+
+        if user.name:
+            user_to_update.name = user.name
+        if user.email:
+            user_to_update.email = user.email
+        if user.password:
+            user_to_update.password_hash = hash_password(user.password)
+
+        await self.db.commit()
+        return True
         
 
-async def db_get_users(name: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None) -> List[Users]:
-    async with SESSION() as session:
+    async def get_users(self, name: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None) -> List[Users]:
         stmt = select(Users)
 
         if name:
@@ -54,32 +54,30 @@ async def db_get_users(name: Optional[str] = None, email: Optional[str] = None, 
         if role:
             stmt = stmt.where(Users.role == role)
 
-        result = await session.execute(stmt)
+        result = await self.db.execute(stmt)
         return result.scalars().all()
     
 
-async def db_get_user_by_id(id: int) -> Optional[Users]:
-    async with SESSION() as session:
-        stmt = select(Users).where(Users.id == id)
-        result = await session.execute(stmt)
+    async def get_user_by_id(self, id: int) -> Optional[Users]:
+        result = await self.db.execute(
+            select(Users).where(Users.id == id)
+        )
         return result.scalars().first()
-    
 
-async def db_delete_user(id: int) -> bool:
-    async with SESSION() as session:
-        async with session.begin():
-            user_to_delete = await session.get(Users, id)
-            if user_to_delete:
-                await session.delete(user_to_delete)
-                await session.commit()
-                return True
+    async def delete_user(self, id: int) -> bool:
+        user_to_delete = await self.db.get(Users, id)
+        if not user_to_delete:
             return False
+
+        await self.db.delete(user_to_delete)
+        await self.db.commit()
+        return True
         
 
-async def db_login_user(email: str, password: str) -> Optional[Users]:
-    async with SESSION() as session:
-        stmt = select(Users).where(Users.email == email)
-        result = await session.execute(stmt)
+    async def login_user(self, email: str, password: str) -> Optional[Users]:
+        result = await self.db.execute(
+            select(Users).where(Users.email == email)
+        )
         user = result.scalars().first()
         if user and verify_password(password, user.password_hash):
             return user
