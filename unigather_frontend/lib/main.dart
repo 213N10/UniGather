@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
-import 'screens/main/main_screen.dart'; // or whatever your main screen is called
+import 'screens/main/main_screen.dart';
+import 'screens/login/login_screen.dart';
+import 'screens/signup/signup_screen.dart';
+import 'screens/explore/explore_screen.dart';
+import 'screens/nearby/nearby_screen.dart';
+import 'screens/create_event/create_event_screen.dart';
+import 'screens/profile/profile_screen.dart';
+import 'package:unigather_frontend/mock_data/mock_users.dart'; // contains mockUser
 
 const MaterialColor uniRed = MaterialColor(_uniRedPrimaryValue, <int, Color>{
   50: Color(0xFFF3CCCC),
@@ -28,7 +35,23 @@ class MyApp extends StatelessWidget {
       title: 'UniGather',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: uniRed, scaffoldBackgroundColor: uniRed),
-      home: const MainPage(),
+      initialRoute: '/main',
+      routes: {
+        '/main': (context) => const MainPage(),
+        '/login': (context) => const LoginScreen(),
+        '/signup': (context) => const SignupScreen(),
+        '/explore': (context) => const ExploreScreen(),
+        '/nearby': (context) => const NearbyScreen(),
+        '/create': (context) => const CreateEventScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/profile') {
+          return MaterialPageRoute(
+            builder: (context) => ProfileScreen(user: mockUser),
+          );
+        }
+        return null; // fallback for undefined routes
+      },
     );
   }
 }

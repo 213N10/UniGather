@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:unigather_frontend/widgets/bottom_nav_bar.dart';
 import '../../models/event.dart';
 import '../../mock_data/mock_events.dart';
+import '../event_details/event_details_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -70,7 +72,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       child: Image.asset(
                         'assets/images/header.png',
                         width: double.infinity,
-                        height: 350,
+                        height: 295,
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -114,7 +116,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               children: [
                                 ElevatedButton(
                                   onPressed: () {
-                                    // TODO: Navigate to event details
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => EventDetailsScreen(
+                                              event: currentEvent,
+                                            ),
+                                      ),
+                                    );
                                   },
                                   child: const Text('See details'),
                                 ),
@@ -154,18 +164,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildCircleButton('⏭️', onTap: _skipEvent),
-                _buildCircleButton('❌', size: 64, onTap: _skipEvent),
+                _buildCircleButton('⏭️', size: 42, onTap: _skipEvent),
+                _buildCircleButton('❌', size: 56, onTap: _skipEvent),
                 _buildCircleButton(
                   '✅',
-                  size: 64,
+                  size: 56,
                   onTap: () {
                     // Optionally do something on "yes"
                     _skipEvent();
                   },
                 ),
                 _buildCircleButton(
-                  '📤',
+                  '🌐',
+                  size: 42,
                   onTap: () {
                     // TODO: Implement sharing
                   },
@@ -175,6 +186,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
           const SizedBox(height: 32),
         ],
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 1, // set this per screen (0=profile, 1=explore, etc.)
+        onTap: (index) {
+          // Replace this with proper navigation
+          switch (index) {
+            case 0:
+              Navigator.pushNamed(context, '/profile');
+              break;
+            case 1:
+              Navigator.pushNamed(context, '/explore');
+              break;
+            case 2:
+              Navigator.pushNamed(context, '/nearby');
+              break;
+            case 3:
+              Navigator.pushNamed(context, '/create');
+              break;
+          }
+        },
       ),
     );
   }
