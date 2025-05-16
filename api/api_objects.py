@@ -63,9 +63,15 @@ class Friendship(BaseModel):
 class FriendshipUpdate(BaseModel):
     status: Literal["pending", "accepted", "blocked", "rejected"]
 
+#LIKES
+class LikeBase(BaseModel):
+    user_id: int
+    event_id: int
 
+#MEDIA
 class MediaBase(BaseModel):
     event_id: int
+    user_id: int | None = None
     type: Literal["image", "video"]
 
 class MediaResponse(MediaBase):

@@ -3,6 +3,7 @@ from typing import Optional, Annotated
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
 from db.database import get_db
 from db.db_controller_user import UserController
 from db.db_controller_events import EventController
@@ -11,12 +12,23 @@ from db.db_controller_comments import CommentController
 from db.db_controller_friends import FriendshipController
 from db.db_controller_media import MediaController
 
+from db.db_controller_user import db_get_user_by_id, db_get_users, db_add_user, db_add_user, db_delete_user, db_delete_user,db_login_user
+from db.db_controller_events import db_add_event, db_get_event_by_id, db_get_events,db_update_event, db_delete_event
+from db.db_controller_attendance import db_add_attendance, db_get_attendance_by_event, db_get_attendance_by_user, db_delete_attendance
+from db.db_controller_comments import db_add_comment, db_get_comments_for_event, db_delete_comment
+from db.db_controller_friends import db_send_friend_request, db_update_friend_status, db_get_friends, db_delete_friend
+from db.db_controller_media import db_add_media, db_get_media_for_event, db_delete_media, db_get_media_for_user
+from db.db_controller_likes import db_add_like, db_delete_like, db_get_likes_for_user
+
+
+
 from api.api_objects import UserCreate, UserUpdate
 from api.api_objects import EventBase, EventUpdate
 from api.api_objects import AttendanceBase
 from api.api_objects import CommentBase
 from api.api_objects import Friendship, FriendshipUpdate
 from api.api_objects import MediaBase
+from api.api_objects import LikeBase
 
 tags_metadata = [
     {
@@ -271,8 +283,32 @@ async def get_event_media(event_id: int, db: AsyncSession = Depends(get_db)):
     result = await service.get_media_for_event(event_id)
     return result
 
+
 @app.delete("/media/{media_id}", tags=["media"])
 async def delete_media(media_id: int, db: AsyncSession = Depends(get_db)):
     service = MediaController(db)
     result = await service.delete_media(media_id)
-    return {"message": "Media deleted"} if result else {"error": "Media not found"}
+
+@app.get("/media/user/{user_id}", tags=["media"])
+async def get_user_media(user_id: int, db: AsyncSession = Depends(get_db)):
+    service = MediaController(db)
+    result = await service.get_media_for_user(user_id)
+    return result
+
+
+
+#LIKES
+@app.post("/likes")
+async def add_like(like: LikeBase):
+    result = await db_add_like(like)
+    return {"message": "Liked"} if result else {"error": "Failed to like"}
+
+@app.delete("/likes")
+async def remove_like(like: LikeBase):
+    result = await db_delete_like(like)
+    return {"message": "Unliked"} if result else {"error": "Like not found"}
+
+@app.get("/likes/{user_id}")
+async def get_user_likes(user_id: int):
+    result = await db_get_likes_for_user(user_id)
+    return result

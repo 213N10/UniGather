@@ -1,6 +1,7 @@
 from typing import List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from db.db_controller_likes import SESSION
 from db.db_models import Media
 from api.api_objects import MediaBase
 from datetime import datetime
@@ -28,6 +29,7 @@ class MediaController:
         # Tworzymy nowe media
         new_media = Media(
             event_id=media.event_id,
+                user_id=media.user_id,
             type=media.type,
             url=url,
             uploaded_at=datetime.now()
@@ -42,6 +44,12 @@ class MediaController:
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
+    async def get_media_for_user(self, user_id: int) -> List[Media]:
+        stmt = select(Media).where(Media.user_id == user_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+
 
     async def delete_media(self, media_id: int) -> bool:
         media = await self.db.get(Media, media_id)
@@ -50,4 +58,3 @@ class MediaController:
             await self.db.commit()
             return True
         return False
-
