@@ -105,14 +105,34 @@ class Comments(Base):
 class Media(Base):
     __tablename__ = 'media'
     __table_args__ = (
-        ForeignKeyConstraint(['event_id'], ['events.id'], ondelete='CASCADE', name='media_event_id_fkey'),
-        PrimaryKeyConstraint('id', name='media_pkey')
+        ForeignKeyConstraint(['event_id'], ['events.id'], ondelete='CASCADE'),
+        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        PrimaryKeyConstraint('id', name='media_pkey'),
     )
 
     id = mapped_column(Integer)
+    event_id = mapped_column(Integer, nullable=True)
+    user_id = mapped_column(Integer, nullable=True)
     url = mapped_column(String(255), nullable=False)
-    event_id = mapped_column(Integer)
     type = mapped_column(String(20))
     uploaded_at = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
 
     event: Mapped[Optional['Events']] = relationship('Events', back_populates='media')
+    user: Mapped[Optional['Users']] = relationship('Users', backref='media_files')
+
+
+
+class Likes(Base):
+    __tablename__ = 'likes'
+    __table_args__ = (
+        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        ForeignKeyConstraint(['event_id'], ['events.id'], ondelete='CASCADE'),
+        PrimaryKeyConstraint('user_id', 'event_id', name='likes_pkey')
+    )
+
+    user_id = mapped_column(Integer, nullable=False)
+    event_id = mapped_column(Integer, nullable=False)
+    created_at = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
+
+    user: Mapped['Users'] = relationship('Users', backref='liked_events')
+    event: Mapped['Events'] = relationship('Events', backref='liked_by')

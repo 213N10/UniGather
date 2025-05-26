@@ -5,7 +5,7 @@
 -- Dumped from database version 17.4
 -- Dumped by pg_dump version 17.4
 
--- Started on 2025-04-19 13:38:50
+-- Started on 2025-05-16 16:16:07
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -71,7 +71,7 @@ CREATE SEQUENCE public.comments_id_seq
 ALTER SEQUENCE public.comments_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4961 (class 0 OID 0)
+-- TOC entry 4972 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: comments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -115,7 +115,7 @@ CREATE SEQUENCE public.events_id_seq
 ALTER SEQUENCE public.events_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4962 (class 0 OID 0)
+-- TOC entry 4973 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -139,6 +139,20 @@ CREATE TABLE public.friends (
 ALTER TABLE public.friends OWNER TO postgres;
 
 --
+-- TOC entry 227 (class 1259 OID 17146)
+-- Name: likes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.likes (
+    user_id integer NOT NULL,
+    event_id integer NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.likes OWNER TO postgres;
+
+--
 -- TOC entry 226 (class 1259 OID 17134)
 -- Name: media; Type: TABLE; Schema: public; Owner: postgres
 --
@@ -148,7 +162,8 @@ CREATE TABLE public.media (
     event_id integer,
     url character varying(255) NOT NULL,
     type character varying(20),
-    uploaded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    uploaded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    user_id integer
 );
 
 
@@ -171,7 +186,7 @@ CREATE SEQUENCE public.media_id_seq
 ALTER SEQUENCE public.media_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4963 (class 0 OID 0)
+-- TOC entry 4974 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: media_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -213,7 +228,7 @@ CREATE SEQUENCE public.users_id_seq
 ALTER SEQUENCE public.users_id_seq OWNER TO postgres;
 
 --
--- TOC entry 4964 (class 0 OID 0)
+-- TOC entry 4975 (class 0 OID 0)
 -- Dependencies: 217
 -- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -222,7 +237,7 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- TOC entry 4773 (class 2604 OID 17100)
+-- TOC entry 4777 (class 2604 OID 17100)
 -- Name: comments id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -230,7 +245,7 @@ ALTER TABLE ONLY public.comments ALTER COLUMN id SET DEFAULT nextval('public.com
 
 
 --
--- TOC entry 4768 (class 2604 OID 17067)
+-- TOC entry 4772 (class 2604 OID 17067)
 -- Name: events id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -238,7 +253,7 @@ ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.event
 
 
 --
--- TOC entry 4777 (class 2604 OID 17137)
+-- TOC entry 4781 (class 2604 OID 17137)
 -- Name: media id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -246,7 +261,7 @@ ALTER TABLE ONLY public.media ALTER COLUMN id SET DEFAULT nextval('public.media_
 
 
 --
--- TOC entry 4765 (class 2604 OID 17056)
+-- TOC entry 4769 (class 2604 OID 17056)
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -254,7 +269,7 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 
 
 --
--- TOC entry 4950 (class 0 OID 17079)
+-- TOC entry 4960 (class 0 OID 17079)
 -- Dependencies: 221
 -- Data for Name: attendance; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -267,7 +282,7 @@ COPY public.attendance (user_id, event_id, status, "timestamp") FROM stdin;
 
 
 --
--- TOC entry 4952 (class 0 OID 17097)
+-- TOC entry 4962 (class 0 OID 17097)
 -- Dependencies: 223
 -- Data for Name: comments; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -280,7 +295,7 @@ COPY public.comments (id, event_id, user_id, content, created_at) FROM stdin;
 
 
 --
--- TOC entry 4949 (class 0 OID 17064)
+-- TOC entry 4959 (class 0 OID 17064)
 -- Dependencies: 220
 -- Data for Name: events; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -292,7 +307,7 @@ COPY public.events (id, title, description, location, datetime, visibility, crea
 
 
 --
--- TOC entry 4953 (class 0 OID 17116)
+-- TOC entry 4963 (class 0 OID 17116)
 -- Dependencies: 224
 -- Data for Name: friends; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -305,19 +320,29 @@ COPY public.friends (user_id, friend_id, status, created_at) FROM stdin;
 
 
 --
--- TOC entry 4955 (class 0 OID 17134)
--- Dependencies: 226
--- Data for Name: media; Type: TABLE DATA; Schema: public; Owner: postgres
+-- TOC entry 4966 (class 0 OID 17146)
+-- Dependencies: 227
+-- Data for Name: likes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.media (id, event_id, url, type, uploaded_at) FROM stdin;
-1	1	https://example.com/images/workshop1.jpg	image	2025-04-08 17:35:30.104968
-2	1	https://example.com/videos/intro.mp4	video	2025-04-08 17:35:30.104968
+COPY public.likes (user_id, event_id, created_at) FROM stdin;
 \.
 
 
 --
--- TOC entry 4947 (class 0 OID 17053)
+-- TOC entry 4965 (class 0 OID 17134)
+-- Dependencies: 226
+-- Data for Name: media; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.media (id, event_id, url, type, uploaded_at, user_id) FROM stdin;
+1	1	https://example.com/images/workshop1.jpg	image	2025-04-08 17:35:30.104968	\N
+2	1	https://example.com/videos/intro.mp4	video	2025-04-08 17:35:30.104968	\N
+\.
+
+
+--
+-- TOC entry 4957 (class 0 OID 17053)
 -- Dependencies: 218
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -330,7 +355,7 @@ COPY public.users (id, name, email, password_hash, role, created_at) FROM stdin;
 
 
 --
--- TOC entry 4965 (class 0 OID 0)
+-- TOC entry 4976 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: comments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -339,7 +364,7 @@ SELECT pg_catalog.setval('public.comments_id_seq', 3, true);
 
 
 --
--- TOC entry 4966 (class 0 OID 0)
+-- TOC entry 4977 (class 0 OID 0)
 -- Dependencies: 219
 -- Name: events_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -348,7 +373,7 @@ SELECT pg_catalog.setval('public.events_id_seq', 2, true);
 
 
 --
--- TOC entry 4967 (class 0 OID 0)
+-- TOC entry 4978 (class 0 OID 0)
 -- Dependencies: 225
 -- Name: media_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -357,7 +382,7 @@ SELECT pg_catalog.setval('public.media_id_seq', 2, true);
 
 
 --
--- TOC entry 4968 (class 0 OID 0)
+-- TOC entry 4979 (class 0 OID 0)
 -- Dependencies: 217
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -366,7 +391,7 @@ SELECT pg_catalog.setval('public.users_id_seq', 3, true);
 
 
 --
--- TOC entry 4786 (class 2606 OID 17085)
+-- TOC entry 4791 (class 2606 OID 17085)
 -- Name: attendance attendance_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -375,7 +400,7 @@ ALTER TABLE ONLY public.attendance
 
 
 --
--- TOC entry 4788 (class 2606 OID 17105)
+-- TOC entry 4793 (class 2606 OID 17105)
 -- Name: comments comments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -384,7 +409,7 @@ ALTER TABLE ONLY public.comments
 
 
 --
--- TOC entry 4784 (class 2606 OID 17073)
+-- TOC entry 4789 (class 2606 OID 17073)
 -- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -393,7 +418,7 @@ ALTER TABLE ONLY public.events
 
 
 --
--- TOC entry 4790 (class 2606 OID 17122)
+-- TOC entry 4795 (class 2606 OID 17122)
 -- Name: friends friends_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -402,7 +427,16 @@ ALTER TABLE ONLY public.friends
 
 
 --
--- TOC entry 4792 (class 2606 OID 17140)
+-- TOC entry 4799 (class 2606 OID 17151)
+-- Name: likes likes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.likes
+    ADD CONSTRAINT likes_pkey PRIMARY KEY (user_id, event_id);
+
+
+--
+-- TOC entry 4797 (class 2606 OID 17140)
 -- Name: media media_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -411,7 +445,7 @@ ALTER TABLE ONLY public.media
 
 
 --
--- TOC entry 4780 (class 2606 OID 17062)
+-- TOC entry 4785 (class 2606 OID 17062)
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -420,7 +454,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4782 (class 2606 OID 17060)
+-- TOC entry 4787 (class 2606 OID 17060)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -429,7 +463,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4794 (class 2606 OID 17091)
+-- TOC entry 4801 (class 2606 OID 17091)
 -- Name: attendance attendance_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -438,7 +472,7 @@ ALTER TABLE ONLY public.attendance
 
 
 --
--- TOC entry 4795 (class 2606 OID 17086)
+-- TOC entry 4802 (class 2606 OID 17086)
 -- Name: attendance attendance_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -447,7 +481,7 @@ ALTER TABLE ONLY public.attendance
 
 
 --
--- TOC entry 4796 (class 2606 OID 17106)
+-- TOC entry 4803 (class 2606 OID 17106)
 -- Name: comments comments_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -456,7 +490,7 @@ ALTER TABLE ONLY public.comments
 
 
 --
--- TOC entry 4797 (class 2606 OID 17111)
+-- TOC entry 4804 (class 2606 OID 17111)
 -- Name: comments comments_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -465,7 +499,7 @@ ALTER TABLE ONLY public.comments
 
 
 --
--- TOC entry 4793 (class 2606 OID 17074)
+-- TOC entry 4800 (class 2606 OID 17074)
 -- Name: events events_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -474,7 +508,7 @@ ALTER TABLE ONLY public.events
 
 
 --
--- TOC entry 4798 (class 2606 OID 17128)
+-- TOC entry 4805 (class 2606 OID 17128)
 -- Name: friends friends_friend_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -483,7 +517,7 @@ ALTER TABLE ONLY public.friends
 
 
 --
--- TOC entry 4799 (class 2606 OID 17123)
+-- TOC entry 4806 (class 2606 OID 17123)
 -- Name: friends friends_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -492,7 +526,25 @@ ALTER TABLE ONLY public.friends
 
 
 --
--- TOC entry 4800 (class 2606 OID 17141)
+-- TOC entry 4809 (class 2606 OID 17157)
+-- Name: likes likes_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.likes
+    ADD CONSTRAINT likes_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4810 (class 2606 OID 17152)
+-- Name: likes likes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.likes
+    ADD CONSTRAINT likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 4807 (class 2606 OID 17141)
 -- Name: media media_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -500,7 +552,16 @@ ALTER TABLE ONLY public.media
     ADD CONSTRAINT media_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id) ON DELETE CASCADE;
 
 
--- Completed on 2025-04-19 13:38:50
+--
+-- TOC entry 4808 (class 2606 OID 17162)
+-- Name: media media_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.media
+    ADD CONSTRAINT media_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+-- Completed on 2025-05-16 16:16:08
 
 --
 -- PostgreSQL database dump complete
