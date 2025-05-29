@@ -1,41 +1,42 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from typing import List
+from datetime import datetime
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from db.db_models import Likes
 from api.api_objects import LikeBase
-from datetime import datetime
 
-ENGINE = create_async_engine("postgresql+asyncpg://postgres:0000@localhost:5432/uni_gather")
-SESSION = async_sessionmaker(ENGINE, expire_on_commit=False)
+class LikeController:
+    def __init__(self, db: AsyncSession):
+        self.db = db
 
-async def db_add_like(like: LikeBase) -> bool:
-    async with SESSION() as session:
-        async with session.begin():
-            like_entry = Likes(
-                user_id=like.user_id,
-                event_id=like.event_id,
-                created_at=datetime.now()
-            )
-            session.add(like_entry)
-            await session.commit()
+    async def add_like(self, like: LikeBase) -> bool:
+        new_like = Likes(
+            user_id=like.user_id,
+            event_id=like.event_id,
+            created_at=datetime.now()
+        )
+        self.db.add(new_like)
+        try:
+            await self.db.commit()
             return True
-
-async def db_delete_like(like: LikeBase) -> bool:
-    async with SESSION() as session:
-        async with session.begin():
-            stmt = select(Likes).where(
-                Likes.user_id == like.user_id,
-                Likes.event_id == like.event_id
-            )
-            result = await session.execute(stmt)
-            existing = result.scalars().first()
-            if existing:
-                await session.delete(existing)
-                await session.commit()
-                return True
+        except Exception:
+            await self.db.rollback()
             return False
 
-async def db_get_likes_for_user(user_id: int):
-    async with SESSION() as session:
+    async def remove_like(self, like: LikeBase) -> bool:
+        stmt = select(Likes).where(
+            Likes.user_id  == like.user_id,
+            Likes.event_id == like.event_id
+        )
+        result = await self.db.execute(stmt)
+        existing = result.scalars().first()
+        if existing:
+            await self.db.delete(existing)
+            await self.db.commit()
+            return True
+        return False
+
+    async def get_likes_for_user(self, user_id: int) -> List[Likes]:
         stmt = select(Likes).where(Likes.user_id == user_id)
-        result = await session.execute(stmt)
+        result = await self.db.execute(stmt)
         return result.scalars().all()
