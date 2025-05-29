@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.db_models import Events
@@ -39,7 +39,7 @@ class EventController:
         result = await self.db.execute(stmt)
         return result.scalars().first()
 
-    async def get_events(self, created_by: Optional[int] = None, visibility: Optional[str] = None) -> List[Events]:
+    async def get_events(self, created_by: Optional[int] = None, visibility: Optional[str] = None) -> Sequence[Events]:
         stmt = select(Events)
 
         if created_by:

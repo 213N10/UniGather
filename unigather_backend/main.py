@@ -12,14 +12,7 @@ from db.db_controller_comments import CommentController
 from db.db_controller_friends import FriendshipController
 from db.db_controller_media import MediaController
 
-from db.db_controller_user import db_get_user_by_id, db_get_users, db_add_user, db_add_user, db_delete_user, db_delete_user,db_login_user
-from db.db_controller_events import db_add_event, db_get_event_by_id, db_get_events,db_update_event, db_delete_event
-from db.db_controller_attendance import db_add_attendance, db_get_attendance_by_event, db_get_attendance_by_user, db_delete_attendance
-from db.db_controller_comments import db_add_comment, db_get_comments_for_event, db_delete_comment
-from db.db_controller_friends import db_send_friend_request, db_update_friend_status, db_get_friends, db_delete_friend
-from db.db_controller_media import db_add_media, db_get_media_for_event, db_delete_media, db_get_media_for_user
 from db.db_controller_likes import db_add_like, db_delete_like, db_get_likes_for_user
-
 
 
 from api.api_objects import UserCreate, UserUpdate
@@ -120,7 +113,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
 @app.put("/users/{user_id}", tags=["users"])
 async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends(get_db)):
     service = UserController(db)
-    db_update_event = await service.update_user(user, user_id)
+    db_update_event = await service.update_user(user_id, user )
     if db_update_event:
         return {"message": "User updated", "user_id": user_id, "user": user}
     else:
@@ -129,6 +122,7 @@ async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends
 #done
 @app.delete("/users/{user_id}", tags=["users"])
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
+    service = UserController(db)
     result = await service.delete_user(user_id)
     service = UserController(db)
     if not result:
