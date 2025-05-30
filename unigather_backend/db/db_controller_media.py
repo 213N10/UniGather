@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Sequence
 from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,12 +34,12 @@ class MediaController:
         await self.db.refresh(new_media)
         return new_media.id
 
-    async def get_media_for_event(self, event_id: int) -> List[Media]:
+    async def get_media_for_event(self, event_id: int) -> Sequence[Media]:
         stmt = select(Media).where(Media.event_id == event_id)
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
-    async def get_media_for_user(self, user_id: int) -> List[Media]:
+    async def get_media_for_user(self, user_id: int) -> Sequence[Media]:
         stmt = select(Media).where(Media.user_id == user_id)
         result = await self.db.execute(stmt)
         return result.scalars().all()

@@ -115,7 +115,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
 @app.put("/users/{user_id}", tags=["users"])
 async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends(get_db)):
     service = UserController(db)
-    db_update_event = await service.update_user(user, user_id)
+    db_update_event = await service.update_user(user_id, user)
     if db_update_event:
         return {"message": "User updated", "user_id": user_id, "user": user}
     else:
