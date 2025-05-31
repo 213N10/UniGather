@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from api.api_objects import UserCreate, UserUpdate, AdminUserUpdate
@@ -44,7 +44,7 @@ class UserController:
         return True
         
 
-    async def get_users(self, name: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None) -> List[Users]:
+    async def get_users(self, name: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None) -> Sequence[Users]:
         stmt = select(Users)
 
         if name:

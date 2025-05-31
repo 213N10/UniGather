@@ -3,7 +3,6 @@ from typing import Optional, Annotated
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 from db.database import get_db
 from db.db_controller_user import UserController
 from db.db_controller_events import EventController
@@ -11,16 +10,7 @@ from db.db_controller_attendance import AttendanceController
 from db.db_controller_comments import CommentController
 from db.db_controller_friends import FriendshipController
 from db.db_controller_media import MediaController
-
-from db.db_controller_user import db_get_user_by_id, db_get_users, db_add_user, db_add_user, db_delete_user, db_delete_user,db_login_user
-from db.db_controller_events import db_add_event, db_get_event_by_id, db_get_events,db_update_event, db_delete_event
-from db.db_controller_attendance import db_add_attendance, db_get_attendance_by_event, db_get_attendance_by_user, db_delete_attendance
-from db.db_controller_comments import db_add_comment, db_get_comments_for_event, db_delete_comment
-from db.db_controller_friends import db_send_friend_request, db_update_friend_status, db_get_friends, db_delete_friend
-from db.db_controller_media import db_add_media, db_get_media_for_event, db_delete_media, db_get_media_for_user
-from db.db_controller_likes import db_add_like, db_delete_like, db_get_likes_for_user
-
-
+from db.db_controller_likes import LikeController
 
 from api.api_objects import UserCreate, UserUpdate
 from api.api_objects import EventBase, EventUpdate
@@ -29,6 +19,7 @@ from api.api_objects import CommentBase
 from api.api_objects import Friendship, FriendshipUpdate
 from api.api_objects import MediaBase
 from api.api_objects import LikeBase
+
 
 tags_metadata = [
     {
@@ -59,6 +50,10 @@ tags_metadata = [
     {
         "name": "media",
         "description": "Operations with pictures uploaded for events.",
+    },
+    {
+        "name": "likes",
+        "description": "Operations for liking/unliking events and fetching a user’s likes.",
     },
     {
         "name": "health",
@@ -120,7 +115,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
 @app.put("/users/{user_id}", tags=["users"])
 async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends(get_db)):
     service = UserController(db)
-    db_update_event = await service.update_user(user, user_id)
+    db_update_event = await service.update_user(user_id, user)
     if db_update_event:
         return {"message": "User updated", "user_id": user_id, "user": user}
     else:
@@ -129,8 +124,8 @@ async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends
 #done
 @app.delete("/users/{user_id}", tags=["users"])
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    result = await service.delete_user(user_id)
     service = UserController(db)
+    result = await service.delete_user(user_id)
     if not result:
         return {"message": "User not found", "user_id": user_id}
     
@@ -298,17 +293,33 @@ async def get_user_media(user_id: int, db: AsyncSession = Depends(get_db)):
 
 
 #LIKES
-@app.post("/likes")
-async def add_like(like: LikeBase):
-    result = await db_add_like(like)
-    return {"message": "Liked"} if result else {"error": "Failed to like"}
+@app.post("/likes", tags=["likes"])
+async def add_like(
+    like: LikeBase,
+    db: AsyncSession = Depends(get_db),
+):
+    service = LikeController(db)
+    success = await service.add_like(like)
+    if success:
+        return {"message": "Liked"}
+    return {"error": "Failed to like"}
 
-@app.delete("/likes")
-async def remove_like(like: LikeBase):
-    result = await db_delete_like(like)
-    return {"message": "Unliked"} if result else {"error": "Like not found"}
+@app.delete("/likes", tags=["likes"])
+async def remove_like(
+    like: LikeBase,
+    db: AsyncSession = Depends(get_db),
+):
+    service = LikeController(db)
+    success = await service.remove_like(like)
+    if success:
+        return {"message": "Unliked"}
+    return {"error": "Like not found"}
 
-@app.get("/likes/{user_id}")
-async def get_user_likes(user_id: int):
-    result = await db_get_likes_for_user(user_id)
-    return result
+@app.get("/likes/{user_id}", tags=["likes"])
+async def get_user_likes(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    service = LikeController(db)
+    likes = await service.get_likes_for_user(user_id)
+    return {"message": "Likes retrieved", "likes": likes}

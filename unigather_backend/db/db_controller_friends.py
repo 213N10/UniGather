@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.db_models import Friends
@@ -49,7 +49,7 @@ class FriendshipController:
             return True
         return False
 
-    async def get_friends(self, user_id: int) -> List[Friends]:
+    async def get_friends(self, user_id: int) -> Sequence[Friends]:
         stmt = select(Friends).where(Friends.user_id == user_id)
         result = await self.db.execute(stmt)
         return result.scalars().all()

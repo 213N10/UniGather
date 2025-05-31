@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from db.db_models import Attendance
@@ -35,12 +35,12 @@ class AttendanceController:
         await self.db.commit()
         return True
 
-    async def get_attendance_by_event(self, event_id: int) -> List[Attendance]:
+    async def get_attendance_by_event(self, event_id: int) -> Sequence[Attendance]:
         stmt = select(Attendance).where(Attendance.event_id == event_id)
         result = await self.db.execute(stmt)
         return result.scalars().all()
 
-    async def get_attendance_by_user(self, user_id: int) -> List[Attendance]:
+    async def get_attendance_by_user(self, user_id: int) -> Sequence[Attendance]:
         stmt = select(Attendance).where(Attendance.user_id == user_id)
         result = await self.db.execute(stmt)
         return result.scalars().all()
