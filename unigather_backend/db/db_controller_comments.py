@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from db.db_models import Comments
@@ -23,7 +23,7 @@ class CommentController:
         await self.db.refresh(new_comment)  # Upewniamy się, że ID jest dostępne
         return new_comment.id
 
-    async def get_comments_for_event(self, event_id: int) -> List[Comments]:
+    async def get_comments_for_event(self, event_id: int) -> Sequence[Comments]:
         stmt = select(Comments).where(Comments.event_id == event_id)
         result = await self.db.execute(stmt)
         return result.scalars().all()
