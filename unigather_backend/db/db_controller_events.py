@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence
+from typing import List, Optional
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.db_models import Events
@@ -19,19 +19,24 @@ class EventController:
         if existing_event:
             return None  # Wydarzenie już istnieje
 
+        dt = event.event_datetime
+        if dt.tzinfo is not None:
+            # drop the tzinfo so it matches your “TIMESTAMP WITHOUT TIME ZONE” column
+            dt = dt.replace(tzinfo=None)
+        
         # Jeśli nie istnieje, dodajemy nowe wydarzenie
         new_event = Events(
             title=event.title,
             description=event.description,
             location=event.location,
-            datetime=event.event_datetime,
+            datetime=dt,
             visibility=event.visibility,
             created_by=event.created_by,
             created_at=datetime.now()
         )
         self.db.add(new_event)
         await self.db.commit()
-        await self.db.refresh(new_event)  # Upewniamy się, że ID jest dostępne
+        await self.db.refresh(new_event)
         return new_event.id
 
     async def get_event_by_id(self, event_id: int) -> Optional[Events]:
@@ -39,7 +44,7 @@ class EventController:
         result = await self.db.execute(stmt)
         return result.scalars().first()
 
-    async def get_events(self, created_by: Optional[int] = None, visibility: Optional[str] = None) -> Sequence[Events]:
+    async def get_events(self, created_by: Optional[int] = None, visibility: Optional[str] = None) -> List[Events]:
         stmt = select(Events)
 
         if created_by:
@@ -61,8 +66,14 @@ class EventController:
             event.description = event_data.description
         if event_data.location is not None:
             event.location = event_data.location
+
         if event_data.event_datetime is not None:
-            event.datetime = event_data.event_datetime
+            # strip tzinfo before assigning
+            new_dt = event_data.event_datetime
+            if new_dt.tzinfo is not None:
+                new_dt = new_dt.replace(tzinfo=None)
+            event.datetime = new_dt
+
         if event_data.visibility is not None:
             event.visibility = event_data.visibility
 
