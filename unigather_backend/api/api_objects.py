@@ -2,6 +2,11 @@ from typing import Literal
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
 class UserBaseModel(BaseModel):
     name: str
     email: str

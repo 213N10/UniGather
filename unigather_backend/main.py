@@ -12,7 +12,7 @@ from db.db_controller_friends import FriendshipController
 from db.db_controller_media import MediaController
 from db.db_controller_likes import LikeController
 
-from api.api_objects import UserCreate, UserUpdate
+from api.api_objects import UserCreate, UserLogin, UserUpdate
 from api.api_objects import EventBase, EventUpdate
 from api.api_objects import AttendanceBase
 from api.api_objects import CommentBase
@@ -145,9 +145,9 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
 
 #done
 @app.post("/login", tags=["authentication"])
-async def login(email: str, password: str, db: AsyncSession = Depends(get_db)):
+async def login(request: UserLogin, db: AsyncSession = Depends(get_db)):
     service = UserController(db)
-    result = await service.login_user(email, password)
+    result = await service.login_user(request.email, request.password)
     if not result:
         return {"message": "Invalid credentials", "user": None}
     
