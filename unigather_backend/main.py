@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Form, HTTPException
 from typing import Optional, Annotated
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +19,8 @@ from api.api_objects import CommentBase
 from api.api_objects import Friendship, FriendshipUpdate
 from api.api_objects import MediaBase
 from api.api_objects import LikeBase
+
+from api.user_auth import oauth2_scheme, get_current_user, create_access_token
 
 
 tags_metadata = [
@@ -85,17 +87,17 @@ app = FastAPI(
     
     openapi_tags=tags_metadata
 )
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @app.get("/health", tags=["health"])
-async def health_check(token: Annotated[str, Depends(oauth2_scheme)]):
+async def health_check(current_user = Depends(get_current_user)):
     return {"status": "healthy"}
 
 
 #done
 @app.get("/users", tags=["users"])
-async def get_users(token: Annotated[str, Depends(oauth2_scheme)], name: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+async def get_users(current_user = Depends(get_current_user), name: Optional[str] = None, email: Optional[str] = None, role: Optional[str] = None, db: AsyncSession = Depends(get_db)):
     service = UserController(db)
     result = await service.get_users(name, email, role)
     if not result:
@@ -104,7 +106,7 @@ async def get_users(token: Annotated[str, Depends(oauth2_scheme)], name: Optiona
     
 #done
 @app.get("/users/{user_id}", tags=["users"])
-async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user(user_id: int, current_user = Depends(get_current_user),  db: AsyncSession = Depends(get_db)):
     service = UserController(db)
     result = await service.get_user_by_id(user_id)
     if result:
@@ -113,7 +115,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
         return {"message": "User not found", "user": None}
 
 @app.put("/users/{user_id}", tags=["users"])
-async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends(get_db)):
+async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = UserController(db)
     db_update_event = await service.update_user(user_id, user)
     if db_update_event:
@@ -123,7 +125,7 @@ async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends
 
 #done
 @app.delete("/users/{user_id}", tags=["users"])
-async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_user(user_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = UserController(db)
     result = await service.delete_user(user_id)
     if not result:
@@ -142,31 +144,52 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     return {"message": "User created", "user": user}
 
 #done
-@app.get("/login", tags=["authentication"])
+@app.post("/login", tags=["authentication"])
 async def login(email: str, password: str, db: AsyncSession = Depends(get_db)):
     service = UserController(db)
     result = await service.login_user(email, password)
     if not result:
         return {"message": "Invalid credentials", "user": None}
     
-    return {"message": "Login successful", "user": result}
+    access_token = create_access_token(data={"sub": result.id})
+    
+    return {"message": "Login successful", "access_token": access_token, "token_type": "bearer", "user": result}
 
+@app.post("/token", tags=["authentication"])
+async def swagger_login(
+    username: str = Form(...),
+    password: str = Form(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Swagger login endpoint to generate a token.
+    This is used for testing purposes in the Swagger UI.
+    """
+    service = UserController(db)
+    user = await service.login_user(email = username, password = password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials"
+        )
+    token = create_access_token(data={"sub": user.id})
+    return {"access_token": token, "token_type": "bearer", "user": user}
 
 #Events
 @app.post("/events", tags=["events"])
-async def create_event(event: EventBase, db: AsyncSession = Depends(get_db)):
+async def create_event(event: EventBase, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = EventController(db)
     event_id = await service.add_event(event)
     return {"message": "Event created", "event_id": event_id}
 
 @app.get("/events", tags=["events"])
-async def list_events(created_by: Optional[int] = None, visibility: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+async def list_events(created_by: Optional[int] = None, visibility: Optional[str] = None, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = EventController(db)
     result = await service.get_events(created_by, visibility)
     return result
 
 @app.get("/events/{event_id}", tags=["events"])
-async def get_event(event_id: int, db: AsyncSession = Depends(get_db)):
+async def get_event(event_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = EventController(db)
     result = await service.get_event_by_id(event_id)
     if result:
@@ -174,7 +197,7 @@ async def get_event(event_id: int, db: AsyncSession = Depends(get_db)):
     return {"error": "Event not found"}
 
 @app.put("/events/{event_id}", tags=["events"])
-async def update_event(event_id: int, event: EventUpdate, db: AsyncSession = Depends(get_db)):
+async def update_event(event_id: int, event: EventUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = EventController(db)
     success = await service.update_event(event_id, event)
     if success:
@@ -182,7 +205,7 @@ async def update_event(event_id: int, event: EventUpdate, db: AsyncSession = Dep
     return {"error": "Event not found"}
 
 @app.delete("/events/{event_id}", tags=["events"])
-async def delete_event(event_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_event(event_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = EventController(db)
     success = await service.delete_event(event_id)
     if success:
@@ -191,7 +214,7 @@ async def delete_event(event_id: int, db: AsyncSession = Depends(get_db)):
 
 #Attendance
 @app.post("/attendance", tags=["attendance"])
-async def add_attendance(attendance: AttendanceBase, db: AsyncSession = Depends(get_db)):
+async def add_attendance(attendance: AttendanceBase, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = AttendanceController(db)
     result = await service.add_attendance(attendance)
     if result:
@@ -199,19 +222,19 @@ async def add_attendance(attendance: AttendanceBase, db: AsyncSession = Depends(
     return {"error": "Could not add attendance"}
 
 @app.get("/attendance/event/{event_id}", tags=["attendance"])
-async def get_event_attendees(event_id: int, db: AsyncSession = Depends(get_db)):
+async def get_event_attendees(event_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = AttendanceController(db)
     result = await service.get_attendance_by_event(event_id)
     return result
 
 @app.get("/attendance/user/{user_id}", tags=["attendance"])
-async def get_user_attendance(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user_attendance(user_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = AttendanceController(db)
     result = await service.get_attendance_by_user(user_id)
     return result
 
 @app.delete("/attendance", tags=["attendance"])
-async def delete_attendance(user_id: int, event_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_attendance(user_id: int, event_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = AttendanceController(db)
     result = await service.delete_attendance(user_id, event_id)
     if result:
@@ -220,20 +243,20 @@ async def delete_attendance(user_id: int, event_id: int, db: AsyncSession = Depe
 
 #Comments
 @app.post("/comments", tags=["comments"])
-async def add_comment(comment: CommentBase, db: AsyncSession = Depends(get_db)):
+async def add_comment(comment: CommentBase, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = CommentController(db)
     comment_id = await service.add_comment(comment)
     return {"message": "Comment added", "comment_id": comment_id}
 
 @app.get("/comments/{event_id}", tags=["comments"])
-async def get_comments(event_id: int, db: AsyncSession = Depends(get_db)):
+async def get_comments(event_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = CommentController(db)
 
     result = await service.get_comments_for_event(event_id)
     return result
 
 @app.delete("/comments/{comment_id}", tags=["comments"])
-async def delete_comment(comment_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_comment(comment_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = CommentController(db)
 
     result = await service.delete_comment(comment_id)
@@ -243,49 +266,49 @@ async def delete_comment(comment_id: int, db: AsyncSession = Depends(get_db)):
 
 #Friends
 @app.post("/friends", tags=["friends"])
-async def send_friend_request(friendship: Friendship, db: AsyncSession = Depends(get_db)):
+async def send_friend_request(friendship: Friendship, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = FriendshipController(db)
     result = await service.send_friend_request(friendship)
     return {"message": "Friend request sent" if result else "Failed to send request"}
 
 @app.put("/friends/{user_id}/{friend_id}", tags=["friends"])
-async def update_friend_status(user_id: int, friend_id: int, update: FriendshipUpdate, db: AsyncSession = Depends(get_db)):
+async def update_friend_status(user_id: int, friend_id: int, update: FriendshipUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = FriendshipController(db)
     result = await service.update_friend_status(user_id, friend_id, update.status)
     return {"message": "Friendship updated" if result else "Friendship not found"}
 
 @app.get("/friends/{user_id}", tags=["friends"])
-async def get_friends(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_friends(user_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = FriendshipController(db)
     return await service.get_friends(user_id)
 
 @app.delete("/friends/{user_id}/{friend_id}", tags=["friends"])
-async def delete_friend(user_id: int, friend_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_friend(user_id: int, friend_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = FriendshipController(db)
     result = await service.delete_friend(user_id, friend_id)
     return {"message": "Friend removed" if result else "Friendship not found"}
 
 #Media
 @app.post("/media", tags=["media"])
-async def add_media(media: MediaBase, url: str, db: AsyncSession = Depends(get_db)):
+async def add_media(media: MediaBase, url: str, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = MediaController(db)
     media_id = await service.add_media(media, url)
     return {"message": "Media added", "media_id": media_id}
 
 @app.get("/media/{event_id}", tags=["media"])
-async def get_event_media(event_id: int, db: AsyncSession = Depends(get_db)):
+async def get_event_media(event_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = MediaController(db)
     result = await service.get_media_for_event(event_id)
     return result
 
 
 @app.delete("/media/{media_id}", tags=["media"])
-async def delete_media(media_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_media(media_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = MediaController(db)
     result = await service.delete_media(media_id)
 
 @app.get("/media/user/{user_id}", tags=["media"])
-async def get_user_media(user_id: int, db: AsyncSession = Depends(get_db)):
+async def get_user_media(user_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = MediaController(db)
     result = await service.get_media_for_user(user_id)
     return result
@@ -297,6 +320,7 @@ async def get_user_media(user_id: int, db: AsyncSession = Depends(get_db)):
 async def add_like(
     like: LikeBase,
     db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
     service = LikeController(db)
     success = await service.add_like(like)
@@ -308,6 +332,7 @@ async def add_like(
 async def remove_like(
     like: LikeBase,
     db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
     service = LikeController(db)
     success = await service.remove_like(like)
@@ -319,6 +344,7 @@ async def remove_like(
 async def get_user_likes(
     user_id: int,
     db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
 ):
     service = LikeController(db)
     likes = await service.get_likes_for_user(user_id)
