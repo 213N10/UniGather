@@ -11,12 +11,12 @@ class UserCreate(UserBaseModel):
     password: str
 
 class UserUpdate(BaseModel):
-    name: str = None
-    email: str = None
-    password: str = None
+    name: str | None  = None
+    email: str | None = None
+    password: str | None = None
 
 class AdminUserUpdate(UserUpdate):
-    role: Literal["admin", "user", "org"] = None
+    role: Literal["admin", "user", "org"] | None = None
 #response looks good
 class UserResponse(BaseModel):
     id: int
