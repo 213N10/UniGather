@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'screens/event_details/event_details_screen.dart';
 import 'screens/main/main_screen.dart';
 import 'screens/login/login_screen.dart';
 import 'screens/signup/signup_screen.dart';
@@ -6,7 +7,8 @@ import 'screens/explore/explore_screen.dart';
 import 'screens/nearby/nearby_screen.dart';
 import 'screens/create_event/create_event_screen.dart';
 import 'screens/profile/profile_screen.dart';
-import 'package:unigather_frontend/mock_data/mock_users.dart'; // contains mockUser
+import 'models/user.dart';
+import 'models/event.dart'; // Assuming you have an Event model
 
 const MaterialColor uniRed = MaterialColor(_uniRedPrimaryValue, <int, Color>{
   50: Color(0xFFF3CCCC),
@@ -45,12 +47,17 @@ class MyApp extends StatelessWidget {
         '/create': (context) => const CreateEventScreen(),
       },
       onGenerateRoute: (settings) {
-        if (settings.name == '/profile') {
-          return MaterialPageRoute(
-            builder: (context) => ProfileScreen(user: mockUser),
-          );
+        switch (settings.name) {
+          case '/profile':
+            return MaterialPageRoute(builder: (context) => ProfileScreen());
+          case '/event_details':
+            final event = settings.arguments as Event;
+            return MaterialPageRoute(
+              builder: (context) => EventDetailsScreen(event: event),
+            );
+          default:
+            return MaterialPageRoute(builder: (context) => const MainPage());
         }
-        return null; // fallback for undefined routes
       },
     );
   }

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:unigather_frontend/widgets/bottom_nav_bar.dart';
 import '../../models/user.dart';
 import '../../models/event.dart';
-import '../../mock_data/mock_events.dart';
+import '../../api/user_api.dart';
+import '../../services/auth_service.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final User user;
-  const ProfileScreen({super.key, required this.user});
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -14,25 +14,52 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String selectedTab = 'upcoming';
+  User? user;
+  bool isLoading = true;
+
+  // Dummy placeholders (you’ll populate them using your APIs later)
+  List<Event> upcomingEvents = [];
+  List<Event> finishedEvents = [];
+  List<Event> createdEvents = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    try {
+      final userId = await AuthService.getCurrentUserId();
+      if (userId != null) {
+        final fetchedUser = await UserApi.getUser(userId);
+        setState(() {
+          user = fetchedUser;
+          isLoading = false;
+        });
+      } else {
+        throw Exception("User ID not found in token.");
+      }
+    } catch (e) {
+      print("Error loading user: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  List<Event> getCurrentEvents() {
+    switch (selectedTab) {
+      case 'finished':
+        return finishedEvents;
+      case 'created':
+        return createdEvents;
+      default:
+        return upcomingEvents;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final Color uniRed = const Color.fromARGB(255, 124, 0, 0);
-
-    List<Event> upcomingEvents = [mockEvents[0]];
-    List<Event> finishedEvents = [mockEvents[1]];
-    List<Event> createdEvents = [mockEvents[0], mockEvents[1]];
-
-    List<Event> getCurrentEvents() {
-      switch (selectedTab) {
-        case 'finished':
-          return finishedEvents;
-        case 'created':
-          return createdEvents;
-        default:
-          return upcomingEvents;
-      }
-    }
 
     return Scaffold(
       backgroundColor: uniRed,
@@ -49,79 +76,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
         centerTitle: true,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 16),
-          // Profile picture and name
-          CircleAvatar(
-            radius: 48,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.person, size: 48, color: uniRed),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            widget.user.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            widget.user.email,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          const SizedBox(height: 24),
-
-          const Text(
-            'My Events',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildTabButton('upcoming', 'Upcoming'),
-                _buildTabButton('finished', 'Finished'),
-                _buildTabButton('created', 'Created by Me'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : user == null
+              ? const Center(child: Text('Failed to load user'))
+              : Column(
+                children: [
+                  const SizedBox(height: 16),
+                  CircleAvatar(
+                    radius: 48,
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.person, size: 48, color: uniRed),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    user!.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    user!.email,
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'My Events',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildTabButton('upcoming', 'Upcoming'),
+                        _buildTabButton('finished', 'Finished'),
+                        _buildTabButton('created', 'Created by Me'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 70),
+                        child: ListView.builder(
+                          itemCount: getCurrentEvents().length,
+                          itemBuilder: (context, index) {
+                            final event = getCurrentEvents()[index];
+                            return _buildEventCard(event);
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 70,
-                ), // space for bottom nav
-                child: ListView.builder(
-                  itemCount: getCurrentEvents().length,
-                  itemBuilder: (context, index) {
-                    final event = getCurrentEvents()[index];
-                    return _buildEventCard(event);
-                  },
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 0, // profile = 0
+        currentIndex: 0,
         onTap: (index) {
           switch (index) {
             case 0:
@@ -192,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () {
-          // TODO: navigate to event details if needed
+          // TODO: Navigate to event details
         },
       ),
     );

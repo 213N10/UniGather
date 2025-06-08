@@ -21,6 +21,8 @@ from api.api_objects import MediaBase
 from api.api_objects import LikeBase
 
 from api.user_auth import oauth2_scheme, get_current_user, create_access_token
+from fastapi.middleware.cors import CORSMiddleware
+
 
 
 tags_metadata = [
@@ -94,6 +96,14 @@ app = FastAPI(
 async def health_check():
     return {"status": "healthy"}
 
+#CORS (Cross-Origin Requests, for linking the frontend)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 #done
 @app.get("/users", tags=["users"])

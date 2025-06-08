@@ -1,3 +1,18 @@
+#Python
 wirt
 venv
 *pycache*
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.ios/
+.android/
+build/
+*generated_plugin_registrant.dart
+pubspec.lock
+
+# JavaScript
+node_modules/

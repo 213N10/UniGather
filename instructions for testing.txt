@@ -1,0 +1,73 @@
+UniGather App: Local Launch and Testing Guide
+This document outlines the steps required to set up and run the UniGather application locally for testing purposes. Please follow these instructions carefully.
+
+1. Database Setup (PostgreSQL)
+The application relies on a PostgreSQL database.
+
+Steps:
+
+Install PostgreSQL: Download and install PostgreSQL on your operating system. You can find installers and detailed instructions on the official PostgreSQL website: https://www.postgresql.org/download/
+Create User and Password:
+Once PostgreSQL is installed, open your PostgreSQL client (e.g., psql or pgAdmin).
+Create a user named postgres and set its password to 0000.
+Example using psql (you might need to connect as a superuser initially):
+SQL
+
+CREATE USER postgres WITH PASSWORD '0000';
+ALTER USER postgres WITH SUPERUSER; -- Grant superuser privileges for easier local setup
+Create Database:
+Create a new database named uni_gather.
+Example using psql:
+SQL
+
+CREATE DATABASE uni_gather OWNER postgres;
+Run SQL Script:
+Navigate to the directory containing the uniGather.sql script.
+Execute this script on the uni_gather database to populate it with the necessary schema and initial data.
+Example using psql (assuming you are in the directory of uniGather.sql):
+Bash
+
+psql -U postgres -d uni_gather -f uniGather.sql
+2. Backend Setup (FastAPI)
+The backend is built with FastAPI.
+
+Steps:
+
+Navigate to Backend Folder: Open your terminal or command prompt and navigate to the unigather_backend directory:
+Bash
+
+cd unigather_backend
+Install Dependencies: Install all required Python packages using pip:
+Bash
+
+pip install -r requirements.txt
+Run Backend: Start the FastAPI development server:
+Bash
+
+fastapi dev main.py
+The backend should now be running, typically accessible at http://127.0.0.1:8000.
+3. Frontend Setup (Flutter)
+The frontend is a Flutter application.
+
+Steps:
+
+Install Flutter: If you haven't already, install Flutter by following the official documentation: https://flutter.dev/docs/get-started/install
+Setup Android Emulator:
+Ensure you have Android Studio installed.
+Open Android Studio and go to Tools > Device Manager (or AVD Manager).
+Create a new Android Virtual Device (AVD). It is highly recommended to use a Pixel 5 emulator as this is what the app was developed on, which minimizes potential display or layout issues.
+Launch the Pixel 5 emulator.
+Navigate to Frontend Folder: Open a new terminal or command prompt and navigate to the unigather_frontend directory:
+Bash
+
+cd unigather_frontend
+Run Frontend: Launch the Flutter application on the emulated device:
+Bash
+
+flutter run
+Flutter will build the app and deploy it to your running emulator. This might take a few minutes for the first run.
+4. Post-Installation Packages (If Any)
+During the flutter run or pip install -r requirements.txt process, you might encounter prompts to install additional packages or SDK components. Please follow the instructions provided by the respective tools (Flutter or pip) to install any missing dependencies.
+
+5. Verification
+Once both the FastAPI backend and Flutter frontend are running, you should see the UniGather app displayed on your emulated Pixel 5 screen. You can now begin testing.

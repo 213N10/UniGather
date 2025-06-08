@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:unigather_frontend/widgets/bottom_nav_bar.dart';
 
+import '../../api/event_api.dart';
+import '../../models/event.dart';
+
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
 
@@ -158,7 +161,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 3, // set this per screen (0=profile, 1=explore, etc.)
+        currentIndex: 3,
         onTap: (index) {
           switch (index) {
             case 0:
@@ -207,12 +210,29 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     });
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Handle API submission or local state update
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Event created (mock)')));
+  void _submitForm() async {
+    if (_formKey.currentState!.validate() && _selectedDateTime != null) {
+      final event = Event(
+        title: _titleController.text,
+        description: _descController.text,
+        location: _locationController.text,
+        datetime: _selectedDateTime!,
+        visibility: _visibilityController.text,
+        createdBy: 3, // TODO: Replace with actual user ID
+      );
+
+      try {
+        await EventApi.createEvent(event);
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Event created!')));
+        Navigator.pushNamed(context, '/explore');
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to create event: $e')));
+      }
     }
   }
 }
