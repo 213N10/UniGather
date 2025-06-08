@@ -87,11 +87,11 @@ app = FastAPI(
     
     openapi_tags=tags_metadata
 )
-#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 
 
 @app.get("/health", tags=["health"])
-async def health_check(current_user = Depends(get_current_user)):
+async def health_check():
     return {"status": "healthy"}
 
 
