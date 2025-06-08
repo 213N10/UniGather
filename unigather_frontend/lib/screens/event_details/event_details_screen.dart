@@ -1,10 +1,57 @@
 import 'package:flutter/material.dart';
 import '../../models/event.dart';
+import '../../models/media.dart';
+import '../../api/media_api.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../api/event_api.dart';
 
-class EventDetailsScreen extends StatelessWidget {
+class EventDetailsScreen extends StatefulWidget {
   final Event event;
-  // ignore: prefer_const_constructors_in_immutables
-  EventDetailsScreen({super.key, required this.event});
+
+  const EventDetailsScreen({super.key, required this.event});
+
+  @override
+  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
+}
+
+class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  List<Media> _mediaList = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMedia();
+    _fetchSimilarEvents(); // call it here
+  }
+
+  Future<void> _fetchMedia() async {
+    try {
+      final media = await MediaApi.getMediaForEvent(widget.event.id!);
+      setState(() {
+        _mediaList = media;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  List<Event> _similarEvents = [];
+  bool _loadingSimilar = true;
+
+  void _fetchSimilarEvents() async {
+    try {
+      final events = await EventApi.getEvents();
+      setState(() {
+        _similarEvents = events;
+        _loadingSimilar = false;
+      });
+    } catch (e) {
+      print('Error loading events: $e');
+      setState(() => _loadingSimilar = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,15 +83,12 @@ class EventDetailsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image at the top
               Image.asset(
                 'assets/images/header.png',
                 width: double.infinity,
                 height: 200,
                 fit: BoxFit.cover,
               ),
-
-              // White background content
               Container(
                 color: Colors.white,
                 padding: const EdgeInsets.all(16),
@@ -52,7 +96,7 @@ class EventDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      event.title,
+                      widget.event.title,
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -60,7 +104,7 @@ class EventDetailsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      event.description,
+                      widget.event.description,
                       style: const TextStyle(fontSize: 16),
                     ),
                     const SizedBox(height: 20),
@@ -69,7 +113,7 @@ class EventDetailsScreen extends StatelessWidget {
                         const Icon(Icons.calendar_today, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          _formatDate(event.datetime),
+                          _formatDate(widget.event.datetime),
                           style: const TextStyle(fontSize: 16),
                         ),
                       ],
@@ -80,14 +124,14 @@ class EventDetailsScreen extends StatelessWidget {
                         const Icon(Icons.location_on, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          event.location,
+                          widget.event.location,
                           style: const TextStyle(fontSize: 16),
                         ),
                       ],
                     ),
                     const SizedBox(height: 24),
 
-                    // Gallery section placeholder
+                    // Gallery section
                     const Text(
                       'Gallery',
                       style: TextStyle(
@@ -96,18 +140,65 @@ class EventDetailsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Container(
+                    SizedBox(
                       height: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(child: Text('Gallery Placeholder')),
+                      child:
+                          _isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : _mediaList.isEmpty
+                              ? const Center(child: Text('No media available.'))
+                              : ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _mediaList.length,
+                                separatorBuilder:
+                                    (_, __) => const SizedBox(width: 8),
+                                itemBuilder: (context, index) {
+                                  final media = _mediaList[index];
+                                  return ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child:
+                                        media.type == 'image'
+                                            ? Image.network(
+                                              media.url,
+                                              width: 100,
+                                              height: 100,
+                                              fit: BoxFit.cover,
+                                            )
+                                            : Stack(
+                                              children: [
+                                                Container(
+                                                  width: 100,
+                                                  height: 100,
+                                                  color: Colors.black12,
+                                                  child: const Icon(
+                                                    Icons.videocam,
+                                                    color: Colors.black45,
+                                                    size: 40,
+                                                  ),
+                                                ),
+                                                Positioned.fill(
+                                                  child: Material(
+                                                    color: Colors.transparent,
+                                                    child: InkWell(
+                                                      onTap: () {
+                                                        // TODO: Open video URL in player/screen
+                                                        print(
+                                                          'Open video: ${media.url}',
+                                                        );
+                                                      },
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                  );
+                                },
+                              ),
                     ),
 
                     const SizedBox(height: 24),
 
-                    // Similar events section placeholder
+                    // Similar events placeholder
                     const Text(
                       'Similar Events',
                       style: TextStyle(
@@ -116,24 +207,82 @@ class EventDetailsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Text('Similar Events Placeholder'),
-                      ),
+                    SizedBox(
+                      height: 120,
+                      child:
+                          _loadingSimilar
+                              ? const Center(child: CircularProgressIndicator())
+                              : ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _similarEvents.length,
+                                itemBuilder: (context, index) {
+                                  final e = _similarEvents[index];
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) =>
+                                                  EventDetailsScreen(event: e),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      width: 200,
+                                      margin: const EdgeInsets.only(right: 12),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[200],
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            e.title,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            e.description,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const Spacer(),
+                                          Text(
+                                            _formatDate(e.datetime),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                     ),
 
                     const SizedBox(height: 24),
 
-                    // Share button
                     Center(
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          // TODO: implement share functionality
+                          final url =
+                              'https://your-app-url.com/event/${widget.event.id}'; // TODO: Adjust link
+
+                          SharePlus.instance.share(
+                            ShareParams(
+                              text:
+                                  "Check out this event on UniGather!\n\n${widget.event.title}\n$url",
+                            ),
+                          );
                         },
                         icon: const Icon(Icons.share),
                         label: const Text(

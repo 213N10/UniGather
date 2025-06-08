@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:unigather_frontend/widgets/bottom_nav_bar.dart';
 import '../../models/event.dart';
-import '../../mock_data/mock_events.dart';
+import '../../api/event_api.dart';
+import '../../api/attendance_api.dart';
+import '../../services/auth_service.dart';
+import '../../widgets/bottom_nav_bar.dart';
 import '../event_details/event_details_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -12,18 +14,52 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
+  List<Event> events = [];
   int currentIndex = 0;
-  bool liked = false;
+  bool isLoading = true;
+  int? userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserAndEvents();
+  }
+
+  Future<void> _loadUserAndEvents() async {
+    try {
+      final fetchedUserId = await AuthService.getCurrentUserId();
+      if (fetchedUserId == null) throw Exception('No user ID');
+
+      final fetchedEvents = await EventApi.getEvents();
+      final attendance = await AttendanceApi().getAttendanceByUser(
+        fetchedUserId,
+      );
+
+      final attendingEventIds =
+          attendance
+              .where((a) => a['status'] == 'going')
+              .map((e) => e['event_id'] as int)
+              .toSet();
+
+      final filteredEvents =
+          fetchedEvents
+              .where((e) => !attendingEventIds.contains(e.id))
+              .toList();
+
+      setState(() {
+        userId = fetchedUserId;
+        events = filteredEvents;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      debugPrint('Error loading user/events: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final Color uniRed = const Color.fromARGB(255, 124, 0, 0);
-
-    if (mockEvents.isEmpty) {
-      return const Center(child: Text("No events available."));
-    }
-
-    final Event currentEvent = mockEvents[currentIndex];
 
     return Scaffold(
       backgroundColor: uniRed,
@@ -55,107 +91,23 @@ class _ExploreScreenState extends State<ExploreScreen> {
           const SizedBox(height: 16),
           Expanded(
             child: Center(
-              child: Card(
-                elevation: 20,
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  children: [
-                    // Top image half (hardcoded for now)
-                    ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                      ),
-                      child: Image.asset(
-                        'assets/images/header.png',
-                        width: double.infinity,
-                        height: 295,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    // Bottom white content half
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        width: double.infinity,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.vertical(
-                            bottom: Radius.circular(20),
+              child:
+                  isLoading
+                      ? const CircularProgressIndicator()
+                      : (events.isEmpty || currentIndex >= events.length)
+                      ? const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Text(
+                          'No events available - check later!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
                           ),
+                          textAlign: TextAlign.center,
                         ),
-                        child: Column(
-                          mainAxisAlignment:
-                              MainAxisAlignment.center, // Vertically center
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Text(
-                              currentEvent.title,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '📅 ${_formatDate(currentEvent.datetime)}',
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '📍 ${currentEvent.location}',
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            const SizedBox(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => EventDetailsScreen(
-                                              event: currentEvent,
-                                            ),
-                                      ),
-                                    );
-                                  },
-                                  child: const Text('See details'),
-                                ),
-                                TextButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      liked = !liked;
-                                    });
-                                  },
-                                  icon: Icon(
-                                    liked
-                                        ? Icons.favorite
-                                        : Icons.favorite_border,
-                                    color: liked ? Colors.red : Colors.grey,
-                                  ),
-                                  label: Text(
-                                    liked ? 'Liked (21)' : 'Liked (20)',
-                                    style: TextStyle(
-                                      color: liked ? Colors.red : Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                      )
+                      : _buildEventCard(events[currentIndex]),
             ),
           ),
           const SizedBox(height: 16),
@@ -164,23 +116,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildCircleButton('⏭️', size: 42, onTap: _skipEvent),
-                _buildCircleButton('❌', size: 56, onTap: _skipEvent),
-                _buildCircleButton(
-                  '✅',
-                  size: 56,
-                  onTap: () {
-                    // Optionally do something on "yes"
-                    _skipEvent();
-                  },
-                ),
-                _buildCircleButton(
-                  '🌐',
-                  size: 42,
-                  onTap: () {
-                    // TODO: Implement sharing
-                  },
-                ),
+                _buildCircleButton('❌', size: 56, onTap: _rejectEvent),
+                _buildCircleButton('✅', size: 56, onTap: _attendEvent),
               ],
             ),
           ),
@@ -188,9 +125,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         ],
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 1, // set this per screen (0=profile, 1=explore, etc.)
+        currentIndex: 1,
         onTap: (index) {
-          // Replace this with proper navigation
           switch (index) {
             case 0:
               Navigator.pushNamed(context, '/profile');
@@ -210,12 +146,130 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  void _skipEvent() {
-    setState(() {
-      liked = false;
-      num number = (currentIndex + 1) % mockEvents.length;
-      currentIndex = number.toInt();
-    });
+  Widget _buildEventCard(Event event) {
+    return Card(
+      elevation: 20,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            child: Image.asset(
+              'assets/images/header.png',
+              width: double.infinity,
+              height: 295,
+              fit: BoxFit.cover,
+            ),
+          ),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Text(
+                    event.title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '📅 ${_formatDate(event.datetime)}',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '📍 ${event.location}',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => EventDetailsScreen(event: event),
+                            ),
+                          );
+                        },
+                        child: const Text('See details'),
+                      ),
+                      FutureBuilder<List<Map<String, dynamic>>>(
+                        future: AttendanceApi().getAttendanceByEvent(event.id!),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const SizedBox();
+                          final goingCount =
+                              snapshot.data!
+                                  .where((a) => a['status'] == 'going')
+                                  .length;
+                          return Row(
+                            children: [
+                              const Icon(Icons.people, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text('$goingCount going'),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _attendEvent() async {
+    if (userId == null || currentIndex >= events.length) return;
+
+    final currentEvent = events[currentIndex];
+    final success = await AttendanceApi().addAttendance(
+      userId: userId!,
+      eventId: currentEvent.id!,
+      status: "going",
+    );
+
+    if (success) {
+      setState(() {
+        events.removeAt(currentIndex);
+        if (currentIndex >= events.length) currentIndex = 0;
+      });
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to add attendance')));
+    }
+  }
+
+  void _rejectEvent() {
+    if (currentIndex < events.length) {
+      setState(() {
+        events.removeAt(currentIndex);
+        if (currentIndex >= events.length) currentIndex = 0;
+      });
+    }
   }
 
   String _formatDate(DateTime dt) {
