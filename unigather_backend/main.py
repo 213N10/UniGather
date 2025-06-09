@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, Form, HTTPException
 from typing import Optional, Annotated
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+from dotenv import load_dotenv
 
 from db.database import get_db
 from db.db_controller_user import UserController
@@ -22,6 +23,7 @@ from api.api_objects import LikeBase
 
 from api.user_auth import oauth2_scheme, get_current_user, create_access_token
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 
 
@@ -76,6 +78,7 @@ description = """
 
 """
 
+load_dotenv()
 
 app = FastAPI(
     title="UniGather API",
