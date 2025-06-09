@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config.dart';
+import '../models/friend.dart';
 
 class FriendsApi {
-  // Add friend
+  // Send a friend request
   static Future<bool> addFriend(int userId, int friendId) async {
     final url = Uri.parse('$baseUrl/friends');
     final response = await http.post(
@@ -11,37 +12,37 @@ class FriendsApi {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'user_id': userId, 'friend_id': friendId}),
     );
-
     if (response.statusCode == 200) {
-      final message = jsonDecode(response.body)['message'];
-      return message == 'Friend added';
+      final msg = jsonDecode(response.body)['message'];
+      return msg == 'Friend request sent';
     }
     return false;
   }
 
-  // Get friends of a user
-  static Future<List<Map<String, dynamic>>> getFriends(int userId) async {
+  // Get all friendships for a user
+  static Future<List<Friend>> getFriends(int userId) async {
     final url = Uri.parse('$baseUrl/friends/$userId');
     final response = await http.get(url);
-
     if (response.statusCode == 200) {
       final List<dynamic> jsonList = jsonDecode(response.body);
-      return jsonList.cast<Map<String, dynamic>>();
+      return jsonList
+          .map((j) => Friend.fromJson(j as Map<String, dynamic>))
+          .toList();
     } else {
       throw Exception('Failed to load friends list');
     }
   }
 
-  // Remove friend
+  // Remove a friendship
   static Future<bool> deleteFriend(int userId, int friendId) async {
-    final url = Uri.parse(
-      '$baseUrl/friends?user_id=$userId&friend_id=$friendId',
+    final url = Uri.parse('$baseUrl/friends/$userId/$friendId');
+    final response = await http.delete(
+      url,
+      headers: {'Content-Type': 'application/json'},
     );
-    final response = await http.delete(url);
-
     if (response.statusCode == 200) {
-      final message = jsonDecode(response.body)['message'];
-      return message == 'Friend removed';
+      final msg = jsonDecode(response.body)['message'];
+      return msg == 'Friend removed';
     }
     return false;
   }
