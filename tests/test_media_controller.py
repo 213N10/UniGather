@@ -1,4 +1,3 @@
-# tests/test_media_controller.py
 
 import pytest
 from datetime import datetime, timedelta
@@ -8,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.db_models import Users, Events, Media
 from api.api_objects import MediaBase
-from db.db_controller_media import MediaController  # adjust import path if necessary
+from db.db_controller_media import MediaController  
 
 
 @pytest.mark.asyncio
@@ -19,7 +18,6 @@ async def test_add_media_and_prevent_duplicates(db_session: AsyncSession):
     3) Calling add_media(...) again with the same (event_id, url) → returns the same media_id.
     4) Verify exactly one Media row exists in the DB.
     """
-    # STEP 1: Insert a dummy user and event
     user = Users(
         name="Media User",
         email="mediauser@example.com",
@@ -48,16 +46,13 @@ async def test_add_media_and_prevent_duplicates(db_session: AsyncSession):
     media_payload = MediaBase(event_id=event.id, user_id=user.id, type="image")
 
 
-    # STEP 2: First add_media call should return a new ID
     url = "https://example.com/photo1.png"
     first_id = await ctrl.add_media(media_payload, url)
     assert isinstance(first_id, int) and first_id > 0
 
-    # STEP 3: Calling add_media again with the same (event_id, url) should return the same ID
     second_id = await ctrl.add_media(media_payload, url)
     assert second_id == first_id
 
-    # STEP 4: Verify only one Media row exists
     result = await db_session.execute(select(Media))
     all_rows = result.scalars().all()
     assert len(all_rows) == 1
@@ -82,7 +77,6 @@ async def test_get_media_filters(db_session: AsyncSession):
     5) get_media_for_user(user1.id) should return exactly three rows (two for event1 + one for event2).
     6) get_media_for_user(user2.id) should return exactly one row.
     """
-    # STEP 1A: Create two users
     u1 = Users(
         name="User A",
         email="usera@example.com",
@@ -102,7 +96,6 @@ async def test_get_media_filters(db_session: AsyncSession):
     await db_session.refresh(u1)
     await db_session.refresh(u2)
 
-    # STEP 1B: Create two events
     e1 = Events(
         title="Event One",
         description="First event",
@@ -128,33 +121,25 @@ async def test_get_media_filters(db_session: AsyncSession):
 
     ctrl = MediaController(db_session)
 
-    # STEP 2: Add media entries
-    # Two media for e1 by u1
     id1 = await ctrl.add_media(MediaBase(event_id=e1.id, user_id=u1.id, type="image"), "url_e1_u1_1.png")
     id2 = await ctrl.add_media(MediaBase(event_id=e1.id, user_id=u1.id, type="video"), "url_e1_u1_2.mp4")
-    # One media for e1 by u2
     id3 = await ctrl.add_media(MediaBase(event_id=e1.id, user_id=u2.id, type="image"), "url_e1_u2_1.png")
-    # One media for e2 by u1
     id4 = await ctrl.add_media(MediaBase(event_id=e2.id, user_id=u1.id, type="video"), "url_e2_u1_1.mp4")
 
-    # STEP 3: get_media_for_event(e1.id) → 3 rows
     list_e1 = await ctrl.get_media_for_event(e1.id)
     assert len(list_e1) == 3
     returned_ids_e1 = {m.id for m in list_e1}
     assert returned_ids_e1 == {id1, id2, id3}
 
-    # STEP 4: get_media_for_event(e2.id) → 1 row
     list_e2 = await ctrl.get_media_for_event(e2.id)
     assert len(list_e2) == 1
     assert list_e2[0].id == id4
 
-    # STEP 5: get_media_for_user(u1.id) → 3 rows (id1, id2, id4)
     user1_list = await ctrl.get_media_for_user(u1.id)
     assert len(user1_list) == 3
     returned_ids_u1 = {m.id for m in user1_list}
     assert returned_ids_u1 == {id1, id2, id4}
 
-    # STEP 6: get_media_for_user(u2.id) → 1 row (id3)
     user2_list = await ctrl.get_media_for_user(u2.id)
     assert len(user2_list) == 1
     assert user2_list[0].id == id3
@@ -168,7 +153,6 @@ async def test_delete_media(db_session: AsyncSession):
     3) delete_media(same_id) again → False.
     4) delete_media(nonexistent_id) → False.
     """
-    # STEP 1A: Create user + event
     user = Users(
         name="DeleteMediaUser",
         email="deletemedia@example.com",
@@ -193,7 +177,6 @@ async def test_delete_media(db_session: AsyncSession):
     await db_session.commit()
     await db_session.refresh(event)
 
-    # Insert one media entry directly
     media_row = Media(
         event_id=event.id,
         user_id=user.id,
@@ -208,19 +191,15 @@ async def test_delete_media(db_session: AsyncSession):
     ctrl = MediaController(db_session)
     mid = media_row.id
 
-    # STEP 2: delete_media(existing_id) → True
     deleted = await ctrl.delete_media(mid)
     assert deleted is True
 
-    # Confirm removal
     result = await db_session.execute(select(Media).where(Media.id == mid))
     assert result.scalars().first() is None
 
-    # STEP 3: delete_media(same_id) again → False
     deleted_again = await ctrl.delete_media(mid)
     assert deleted_again is False
 
-    # STEP 4: delete_media(nonexistent id) → False
     nonexistent = await ctrl.delete_media(99999)
     assert nonexistent is False
 
@@ -230,10 +209,8 @@ async def test_get_media_empty_lists(db_session: AsyncSession):
     """
     If no Media rows exist yet for a given event or user, both getters should return an empty list.
     """
-    # No setup of Media at all
     ctrl = MediaController(db_session)
 
-    # Choose arbitrary IDs (they don't exist)
     event_list = await ctrl.get_media_for_event(123456)
     assert isinstance(event_list, list) and event_list == []
 
