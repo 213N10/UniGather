@@ -15,6 +15,12 @@ class UserBaseModel(BaseModel):
 class UserCreate(UserBaseModel):
     password: str
 
+class PublicUserCreate(BaseModel):
+    name: str
+    email: str
+    role: Literal["student", "org"]
+    password: str
+
 class UserUpdate(BaseModel):
     name: str | None  = None
     email: str | None = None
@@ -29,6 +35,18 @@ class UserResponse(BaseModel):
     email: str
     role: str
     created_at: datetime
+    model_config = {
+        "from_attributes": True
+    }
+
+class UserResponsePublic(BaseModel):
+    id: int
+    name: str
+    role: str
+
+    model_config = {
+        "from_attributes": True
+    }
 
 
 #EVENTS
