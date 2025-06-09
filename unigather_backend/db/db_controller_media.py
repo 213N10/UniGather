@@ -51,3 +51,8 @@ class MediaController:
         await self.db.delete(media)
         await self.db.commit()
         return True
+    
+    async def get_media_by_id(self, media_id: int) -> Media | None:
+        stmt = select(Media).where(Media.id == media_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().first()

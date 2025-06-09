@@ -35,3 +35,7 @@ class CommentController:
             await self.db.commit()
             return True
         return False
+    async def get_comment_by_id(self, comment_id: int) -> Comments | None:
+        stmt = select(Comments).where(Comments.id == comment_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().first()

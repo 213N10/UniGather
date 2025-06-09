@@ -13,7 +13,7 @@ from db.db_controller_friends import FriendshipController
 from db.db_controller_media import MediaController
 from db.db_controller_likes import LikeController
 
-from api.api_objects import UserCreate, UserLogin, UserUpdate
+from api.api_objects import UserLogin, UserResponse, UserResponsePublic, UserUpdate, PublicUserCreate, UserCreate
 from api.api_objects import EventBase, EventUpdate
 from api.api_objects import AttendanceBase
 from api.api_objects import CommentBase
@@ -115,7 +115,8 @@ async def get_users(current_user = Depends(get_current_user), name: Optional[str
     result = await service.get_users(name, email, role)
     if not result:
         return {"message": "No users found", "users": []}
-    return {"message": "Users found", "users": result} 
+    users = [UserResponsePublic.model_validate(user) for user in result]
+    return {"message": "Users found", "users": users} 
     
 #done
 @app.get("/users/{user_id}", tags=["users"])
@@ -123,12 +124,22 @@ async def get_user(user_id: int, current_user = Depends(get_current_user),  db: 
     service = UserController(db)
     result = await service.get_user_by_id(user_id)
     if result:
-        return {"message": "User found", "user": result}
+        if result.id == current_user.id or current_user.role == "admin":
+            user_data = UserResponse.model_validate(result)
+        else:
+            user_data = UserResponsePublic.model_validate(result)
+
+        return {"message": "User found", "user": user_data}
     else:
         return {"message": "User not found", "user": None}
 
 @app.put("/users/{user_id}", tags=["users"])
 async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to delete this user"
+        )
     service = UserController(db)
     db_update_event = await service.update_user(user_id, user)
     if db_update_event:
@@ -139,18 +150,25 @@ async def update_user(user_id: int, user: UserUpdate, db: AsyncSession = Depends
 #done
 @app.delete("/users/{user_id}", tags=["users"])
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to delete this user"
+        )
     service = UserController(db)
     result = await service.delete_user(user_id)
     if not result:
         return {"message": "User not found", "user_id": user_id}
-    
+        
     return {"message": "User deleted", "user_id": user_id}
-
+    
+        
 #done
 @app.post("/register", tags=["authentication"])
-async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+async def create_user(user: PublicUserCreate, db: AsyncSession = Depends(get_db)):
     service = UserController(db)
-    result = await service.add_user(user)
+    user_create: UserCreate = UserCreate(**user.model_dump())
+    result = await service.add_user(user_create)
     if result is None:
         return {"message": "User already exists", "user": None}
     user = await service.get_user_by_id(result)
@@ -212,22 +230,52 @@ async def get_event(event_id: int, db: AsyncSession = Depends(get_db), current_u
 @app.put("/events/{event_id}", tags=["events"])
 async def update_event(event_id: int, event: EventUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = EventController(db)
+    result = await service.get_event_by_id(event_id)
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    if current_user.role != "admin" and current_user.id != result.created_by:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to update this event"
+        ) 
+    
     success = await service.update_event(event_id, event)
     if success:
         return {"message": "Event updated"}
     return {"error": "Event not found"}
 
 @app.delete("/events/{event_id}", tags=["events"])
-async def delete_event(event_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+async def delete_event(
+    event_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     service = EventController(db)
+    event = await service.get_event_by_id(event_id)
+
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    if current_user.role != "admin" and current_user.id != event.created_by:
+        raise HTTPException(status_code=403, detail="You do not have permission to delete this event")
+
     success = await service.delete_event(event_id)
-    if success:
-        return {"message": "Event deleted"}
-    return {"error": "Event not found"}
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete event")
+
+    return {"message": "Event deleted"}
 
 #Attendance
 @app.post("/attendance", tags=["attendance"])
 async def add_attendance(attendance: AttendanceBase, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+    if attendance.user_id != current_user.id or current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="You can only add your own attendance"
+        )
     service = AttendanceController(db)
     result = await service.add_attendance(attendance)
     if result:
@@ -248,6 +296,12 @@ async def get_user_attendance(user_id: int, db: AsyncSession = Depends(get_db), 
 
 @app.delete("/attendance", tags=["attendance"])
 async def delete_attendance(user_id: int, event_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+    if user_id != current_user.id or current_user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="You can only delete your own attendance"
+        )
+    
     service = AttendanceController(db)
     result = await service.delete_attendance(user_id, event_id)
     if result:
@@ -271,11 +325,15 @@ async def get_comments(event_id: int, db: AsyncSession = Depends(get_db), curren
 @app.delete("/comments/{comment_id}", tags=["comments"])
 async def delete_comment(comment_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = CommentController(db)
+    comment = await service.get_comment_by_id(comment_id)
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
 
-    result = await service.delete_comment(comment_id)
-    if result:
-        return {"message": "Comment deleted"}
-    return {"error": "Comment not found"}
+    if current_user.id != comment.user_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to delete this comment")
+
+    await service.delete_comment(comment_id)
+    return {"message": "Comment deleted"}
 
 #Friends
 @app.post("/friends", tags=["friends"])
@@ -286,6 +344,9 @@ async def send_friend_request(friendship: Friendship, db: AsyncSession = Depends
 
 @app.put("/friends/{user_id}/{friend_id}", tags=["friends"])
 async def update_friend_status(user_id: int, friend_id: int, update: FriendshipUpdate, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to update this friendship")
+
     service = FriendshipController(db)
     result = await service.update_friend_status(user_id, friend_id, update.status)
     return {"message": "Friendship updated" if result else "Friendship not found"}
@@ -297,6 +358,9 @@ async def get_friends(user_id: int, db: AsyncSession = Depends(get_db), current_
 
 @app.delete("/friends/{user_id}/{friend_id}", tags=["friends"])
 async def delete_friend(user_id: int, friend_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to delete this friendship")
+
     service = FriendshipController(db)
     result = await service.delete_friend(user_id, friend_id)
     return {"message": "Friend removed" if result else "Friendship not found"}
@@ -318,7 +382,15 @@ async def get_event_media(event_id: int, db: AsyncSession = Depends(get_db), cur
 @app.delete("/media/{media_id}", tags=["media"])
 async def delete_media(media_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
     service = MediaController(db)
-    result = await service.delete_media(media_id)
+    media = await service.get_media_by_id(media_id)
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
+
+    if current_user.id != media.user_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to delete this media")
+
+    await service.delete_media(media_id)
+    return {"message": "Media deleted"}
 
 @app.get("/media/user/{user_id}", tags=["media"])
 async def get_user_media(user_id: int, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_user)):
@@ -347,6 +419,9 @@ async def remove_like(
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    if like.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to remove this like")
+
     service = LikeController(db)
     success = await service.remove_like(like)
     if success:
