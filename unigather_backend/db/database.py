@@ -5,10 +5,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-DB_STRING = os.environ["DB_STRING"]
 
-
-#engine = create_async_engine(DB_STRING)
 
 # Load environment variables
 USER = os.getenv("user")
