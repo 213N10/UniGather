@@ -2,6 +2,7 @@
 wirt
 venv
 *pycache*
+*.env*
 
 # Flutter/Dart
 .dart_tool/
