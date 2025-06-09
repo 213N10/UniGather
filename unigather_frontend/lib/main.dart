@@ -7,8 +7,13 @@ import 'screens/explore/explore_screen.dart';
 import 'screens/nearby/nearby_screen.dart';
 import 'screens/create_event/create_event_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/friends/friends_screen.dart';
+
 import 'models/user.dart';
-import 'models/event.dart'; // Assuming you have an Event model
+import 'models/event.dart';
+import 'models/like.dart';
+import 'screens/likedEvents/LikedEventsScreen.dart';
+
 
 const MaterialColor uniRed = MaterialColor(_uniRedPrimaryValue, <int, Color>{
   50: Color(0xFFF3CCCC),
@@ -45,6 +50,8 @@ class MyApp extends StatelessWidget {
         '/explore': (context) => const ExploreScreen(),
         '/nearby': (context) => const NearbyScreen(),
         '/create': (context) => const CreateEventScreen(),
+        '/liked'  : (ctx) => const LikedEventsScreen(),
+        '/friends': (ctx) => const FriendsScreen(),
       },
       onGenerateRoute: (settings) {
         switch (settings.name) {

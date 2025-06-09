@@ -65,6 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: uniRed,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        iconTheme: IconThemeData(color: uniRed),         // make icons uniRed
         title: const Text(
           'UniGather',
           style: TextStyle(
@@ -75,100 +76,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.group),
+            onPressed: () => Navigator.pushNamed(context, '/friends'),
+          ),
+        ],
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : user == null
-              ? const Center(child: Text('Failed to load user'))
-              : Column(
-                children: [
-                  const SizedBox(height: 16),
-                  CircleAvatar(
-                    radius: 48,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, size: 48, color: uniRed),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    user!.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    user!.email,
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'My Events',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildTabButton('upcoming', 'Upcoming'),
-                        _buildTabButton('finished', 'Finished'),
-                        _buildTabButton('created', 'Created by Me'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(24),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 70),
-                        child: ListView.builder(
-                          itemCount: getCurrentEvents().length,
-                          itemBuilder: (context, index) {
-                            final event = getCurrentEvents()[index];
-                            return _buildEventCard(event);
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : user == null
+          ? const Center(child: Text('Failed to load user'))
+          : Column(
+        children: [
+          const SizedBox(height: 16),
+          CircleAvatar(
+            radius: 48,
+            backgroundColor: Colors.white,
+            child: Icon(Icons.person, size: 48, color: uniRed),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            user!.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            user!.email,
+            style:
+            const TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'My Events',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildTabButton('upcoming', 'Upcoming'),
+                _buildTabButton('finished', 'Finished'),
+                _buildTabButton('created', 'Created by Me'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
               ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 0,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushNamed(context, '/profile');
-              break;
-            case 1:
-              Navigator.pushNamed(context, '/explore');
-              break;
-            case 2:
-              Navigator.pushNamed(context, '/nearby');
-              break;
-            case 3:
-              Navigator.pushNamed(context, '/create');
-              break;
-          }
-        },
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 70),
+                child: ListView.builder(
+                  itemCount: getCurrentEvents().length,
+                  itemBuilder: (context, index) {
+                    final event = getCurrentEvents()[index];
+                    return _buildEventCard(event);
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -230,6 +218,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String _formatDate(DateTime dt) {
-    return '${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    return '${dt.day}/${dt.month}/${dt.year} '
+        '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}';
   }
 }

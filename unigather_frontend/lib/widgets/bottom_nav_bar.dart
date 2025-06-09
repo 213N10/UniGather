@@ -21,9 +21,11 @@ class BottomNavBar extends StatelessWidget {
       type: BottomNavigationBarType.fixed,
       items: const [
         BottomNavigationBarItem(
-          icon: Text('👤', style: TextStyle(fontSize: 20)),
-          label: 'My Profile',
+          icon: Icon(Icons.favorite_border),
+          activeIcon: Icon(Icons.favorite, color: Colors.red),
+          label: 'Liked',
         ),
+
         BottomNavigationBarItem(
           icon: Text('🔍', style: TextStyle(fontSize: 20)),
           label: 'Explore',
@@ -39,4 +41,6 @@ class BottomNavBar extends StatelessWidget {
       ],
     );
   }
+
+
 }
