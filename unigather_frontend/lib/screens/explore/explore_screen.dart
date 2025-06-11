@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../main.dart';
 import '../../models/event.dart';
 import '../../api/event_api.dart';
 import '../../api/attendance_api.dart';
@@ -15,7 +16,7 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> {
+class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
   List<Event> events = [];
   Set<int> likedEventIds = {};
   int currentIndex = 0;
@@ -28,25 +29,56 @@ class _ExploreScreenState extends State<ExploreScreen> {
     _loadUserAndEvents();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final modalRoute = ModalRoute.of(context);
+    if (modalRoute is PageRoute) {
+      routeObserver.subscribe(this, modalRoute);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when coming back to this screen (from push)
+    _loadUserAndEvents();
+  }
+
+  @override
+  void didPush() {
+    // Called when this screen is first pushed
+    _loadUserAndEvents();
+  }
+
   Future<void> _loadUserAndEvents() async {
     try {
       final fetchedUserId = await AuthService.getCurrentUserId();
       if (fetchedUserId == null) throw Exception('No user ID');
 
       final fetchedEvents = await EventApi.getEvents();
-      final attendance = await AttendanceApi().getAttendanceByUser(fetchedUserId);
+      final attendance = await AttendanceApi().getAttendanceByUser(
+        fetchedUserId,
+      );
       final likes = await LikesApi.getUserLikes(fetchedUserId);
 
       likedEventIds = likes.map((l) => l.eventId).toSet();
 
-      final attendingEventIds = attendance
-          .where((a) => a['status'] == 'going')
-          .map((e) => e['event_id'] as int)
-          .toSet();
+      final attendingEventIds =
+          attendance
+              .where((a) => a['status'] == 'going')
+              .map((e) => e['event_id'] as int)
+              .toSet();
 
-      final filteredEvents = fetchedEvents
-          .where((e) => !attendingEventIds.contains(e.id))
-          .toList();
+      final filteredEvents =
+          fetchedEvents
+              .where((e) => !attendingEventIds.contains(e.id))
+              .toList();
 
       setState(() {
         userId = fetchedUserId;
@@ -71,9 +103,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
         setState(() => likedEventIds.add(eid));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error toggling like: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error toggling like: $e')));
     }
   }
 
@@ -117,22 +149,23 @@ class _ExploreScreenState extends State<ExploreScreen> {
           const SizedBox(height: 16),
           Expanded(
             child: Center(
-              child: isLoading
-                  ? const CircularProgressIndicator()
-                  : (events.isEmpty || currentIndex >= events.length)
-                  ? const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.0),
-                child: Text(
-                  'No events available - check later!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              )
-                  : _buildEventCard(events[currentIndex]),
+              child:
+                  isLoading
+                      ? const CircularProgressIndicator()
+                      : (events.isEmpty || currentIndex >= events.length)
+                      ? const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Text(
+                          'No events available - check later!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                      : _buildEventCard(events[currentIndex]),
             ),
           ),
           const SizedBox(height: 16),
@@ -178,8 +211,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
         Card(
           elevation: 20,
           margin: const EdgeInsets.symmetric(horizontal: 20),
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Column(
             children: [
               ClipRRect(
@@ -207,41 +241,51 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(event.title,
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(
+                        event.title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      Text('📅 ${_formatDate(event.datetime)}',
-                          style: const TextStyle(fontSize: 14)),
+                      Text(
+                        '📅 ${_formatDate(event.datetime)}',
+                        style: const TextStyle(fontSize: 14),
+                      ),
                       const SizedBox(height: 4),
-                      Text('📍 ${event.location}',
-                          style: const TextStyle(fontSize: 14)),
+                      Text(
+                        '📍 ${event.location}',
+                        style: const TextStyle(fontSize: 14),
+                      ),
                       const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           ElevatedButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    EventDetailsScreen(event: event),
-                              ),
-                            ),
+                            onPressed:
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => EventDetailsScreen(event: event),
+                                  ),
+                                ),
                             child: const Text('See details'),
                           ),
                           FutureBuilder<List<Map<String, dynamic>>>(
-                            future:
-                            AttendanceApi().getAttendanceByEvent(event.id!),
+                            future: AttendanceApi().getAttendanceByEvent(
+                              event.id!,
+                            ),
                             builder: (ctx, snap) {
                               if (!snap.hasData) return const SizedBox();
-                              final goingCount = snap.data!
-                                  .where((a) => a['status'] == 'going')
-                                  .length;
+                              final goingCount =
+                                  snap.data!
+                                      .where((a) => a['status'] == 'going')
+                                      .length;
                               return Row(
                                 children: [
-                                  const Icon(Icons.people,
-                                      color: Colors.grey),
+                                  const Icon(Icons.people, color: Colors.grey),
                                   const SizedBox(width: 4),
                                   Text('$goingCount going'),
                                 ],
@@ -278,16 +322,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
   void _attendEvent() async {
     if (userId == null || currentIndex >= events.length) return;
     final currentEvent = events[currentIndex];
-    final success = await AttendanceApi()
-        .addAttendance(userId: userId!, eventId: currentEvent.id!, status: "going");
+    final success = await AttendanceApi().addAttendance(
+      userId: userId!,
+      eventId: currentEvent.id!,
+      status: "going",
+    );
     if (success) {
       setState(() {
         events.removeAt(currentIndex);
         if (currentIndex >= events.length) currentIndex = 0;
       });
     } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Failed to add attendance')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to add attendance')));
     }
   }
 
@@ -303,7 +351,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
   String _formatDate(DateTime dt) {
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
-      'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final w = weekdays[(dt.weekday - 1) % 7];
     final m = months[(dt.month - 1) % 12];
@@ -312,15 +371,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return '$w, $m ${dt.day} · $hh:$mm';
   }
 
-  Widget _buildCircleButton(String emoji,
-      {double size = 48, required VoidCallback onTap}) {
+  Widget _buildCircleButton(
+    String emoji, {
+    double size = 48,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: size,
         height: size,
-        decoration:
-        const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
         alignment: Alignment.center,
         child: Text(emoji, style: const TextStyle(fontSize: 24)),
       ),

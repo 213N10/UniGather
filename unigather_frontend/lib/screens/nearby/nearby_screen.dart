@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geocoding/geocoding.dart';
 
+import '../../main.dart';
 import '../../models/event.dart';
 import '../../api/event_api.dart';
 import '../../widgets/bottom_nav_bar.dart';
@@ -15,11 +16,37 @@ class NearbyScreen extends StatefulWidget {
   State<NearbyScreen> createState() => _NearbyScreenState();
 }
 
-class _NearbyScreenState extends State<NearbyScreen> {
+class _NearbyScreenState extends State<NearbyScreen> with RouteAware {
   List<Event> events = [];
   Map<int, LatLng> _eventCoordinates = {};
   bool _isLoading = true;
   final Color uniRed = const Color.fromARGB(255, 124, 0, 0);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final modalRoute = ModalRoute.of(context);
+    if (modalRoute is PageRoute) {
+      routeObserver.subscribe(this, modalRoute);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Called when coming back to this screen (from push)
+    _loadEventsAndCoordinates();
+  }
+
+  @override
+  void didPush() {
+    // Called when this screen is first pushed
+    _loadEventsAndCoordinates();
+  }
 
   @override
   void initState() {

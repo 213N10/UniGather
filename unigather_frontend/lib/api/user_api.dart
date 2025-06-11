@@ -45,8 +45,9 @@ class UserApi {
     );
 
     if (response.statusCode == 200) {
-      final userJson = jsonDecode(response.body)['user'];
-      return userJson != null ? User.fromJson(userJson) : null;
+      final json = jsonDecode(response.body);
+      final userJson = json['user'];
+      return User.fromJson(userJson);
     } else {
       throw Exception('Failed to fetch user');
     }

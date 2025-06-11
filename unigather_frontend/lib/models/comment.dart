@@ -1,29 +1,42 @@
 class Comment {
   final int id;
-  final int userId;
-  final int eventId;
   final String content;
-  final String timestamp;
+  final int eventId;
+  final int userId;
+  final DateTime timestamp;
 
   Comment({
     required this.id,
-    required this.userId,
-    required this.eventId,
     required this.content,
+    required this.eventId,
+    required this.userId,
     required this.timestamp,
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
       id: json['id'],
-      userId: json['user_id'],
-      eventId: json['event_id'],
       content: json['content'],
-      timestamp: json['timestamp'],
+      eventId: json['event_id'],
+      userId: json['user_id'],
+      timestamp: DateTime.parse(json['created_at']),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'user_id': userId, 'event_id': eventId, 'content': content};
+    return {
+      'id': id,
+      'content': content,
+      'event_id': eventId,
+      'user_id': userId,
+      'created_at': timestamp.toIso8601String(),
+    };
   }
+}
+
+class CommentWithUser {
+  final Comment comment;
+  final String userName;
+
+  CommentWithUser({required this.comment, required this.userName});
 }
