@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../main.dart';
 import '../../models/event.dart';
 import '../../api/event_api.dart';
 import '../../api/attendance_api.dart';
@@ -16,7 +15,7 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
+class _ExploreScreenState extends State<ExploreScreen> {
   List<Event> events = [];
   Set<int> likedEventIds = {};
   int currentIndex = 0;
@@ -29,56 +28,26 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
     _loadUserAndEvents();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final modalRoute = ModalRoute.of(context);
-    if (modalRoute is PageRoute) {
-      routeObserver.subscribe(this, modalRoute);
-    }
-  }
-
-  @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    super.dispose();
-  }
-
-  @override
-  void didPopNext() {
-    // Called when coming back to this screen (from push)
-    _loadUserAndEvents();
-  }
-
-  @override
-  void didPush() {
-    // Called when this screen is first pushed
-    _loadUserAndEvents();
-  }
-
   Future<void> _loadUserAndEvents() async {
     try {
       final fetchedUserId = await AuthService.getCurrentUserId();
       if (fetchedUserId == null) throw Exception('No user ID');
 
       final fetchedEvents = await EventApi.getEvents();
-      final attendance = await AttendanceApi().getAttendanceByUser(
-        fetchedUserId,
-      );
+      final attendance =
+          await AttendanceApi().getAttendanceByUser(fetchedUserId);
       final likes = await LikesApi.getUserLikes(fetchedUserId);
 
       likedEventIds = likes.map((l) => l.eventId).toSet();
 
-      final attendingEventIds =
-          attendance
-              .where((a) => a['status'] == 'going')
-              .map((e) => e['event_id'] as int)
-              .toSet();
+      final attendingEventIds = attendance
+          .where((a) => a['status'] == 'going')
+          .map((e) => e['event_id'] as int)
+          .toSet();
 
-      final filteredEvents =
-          fetchedEvents
-              .where((e) => !attendingEventIds.contains(e.id))
-              .toList();
+      final filteredEvents = fetchedEvents
+          .where((e) => !attendingEventIds.contains(e.id))
+          .toList();
 
       setState(() {
         userId = fetchedUserId;
@@ -103,9 +72,36 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
         setState(() => likedEventIds.add(eid));
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error toggling like: $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error toggling like: $e')));
+    }
+  }
+
+  void _attendEvent() async {
+    if (userId == null || currentIndex >= events.length) return;
+    final currentEvent = events[currentIndex];
+    final success = await AttendanceApi().addAttendance(
+      userId: userId!,
+      eventId: currentEvent.id!,
+      status: "going",
+    );
+    if (success) {
+      setState(() {
+        events.removeAt(currentIndex);
+        if (currentIndex >= events.length) currentIndex = 0;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to add attendance')));
+    }
+  }
+
+  void _rejectEvent() {
+    if (currentIndex < events.length) {
+      setState(() {
+        events.removeAt(currentIndex);
+        if (currentIndex >= events.length) currentIndex = 0;
+      });
     }
   }
 
@@ -149,23 +145,56 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
           const SizedBox(height: 16),
           Expanded(
             child: Center(
-              child:
-                  isLoading
-                      ? const CircularProgressIndicator()
-                      : (events.isEmpty || currentIndex >= events.length)
+              child: isLoading
+                  ? const CircularProgressIndicator()
+                  : (events.isEmpty || currentIndex >= events.length)
                       ? const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20.0),
-                        child: Text(
-                          'No events available - check later!',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
+                          padding: EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Text(
+                            'No events available - check later!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
+                        )
+                      : Dismissible(
+                          key: ValueKey(events[currentIndex].id),
+                          direction: DismissDirection.horizontal,
+                          onDismissed: (direction) {
+                            if (direction ==
+                                DismissDirection.startToEnd) {
+                              // swiped right
+                              _attendEvent();
+                            } else {
+                              // swiped left
+                              _rejectEvent();
+                            }
+                          },
+                          background: Container(
+                            alignment: Alignment.centerLeft,
+                            padding: const EdgeInsets.only(left: 20),
+                            color: Colors.green,
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          secondaryBackground: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            color: Colors.red,
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          child: _buildEventCard(events[currentIndex]),
                         ),
-                      )
-                      : _buildEventCard(events[currentIndex]),
             ),
           ),
           const SizedBox(height: 16),
@@ -174,8 +203,10 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildCircleButton('❌', size: 56, onTap: _rejectEvent),
-                _buildCircleButton('✅', size: 56, onTap: _attendEvent),
+                _buildCircleButton('❌',
+                    size: 56, onTap: _rejectEvent),
+                _buildCircleButton('✅',
+                    size: 56, onTap: _attendEvent),
               ],
             ),
           ),
@@ -186,16 +217,16 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
         currentIndex: 1, // Explore = index 1
         onTap: (index) {
           switch (index) {
-            case 0: // Liked
+            case 0:
               Navigator.pushNamed(context, '/liked');
               break;
-            case 1: // Explore (you are already here)
+            case 1:
               Navigator.pushNamed(context, '/explore');
               break;
-            case 2: // Nearby
+            case 2:
               Navigator.pushNamed(context, '/nearby');
               break;
-            case 3: // Create
+            case 3:
               Navigator.pushNamed(context, '/create');
               break;
           }
@@ -212,8 +243,7 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
           elevation: 20,
           margin: const EdgeInsets.symmetric(horizontal: 20),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+              borderRadius: BorderRadius.circular(20)),
           child: Column(
             children: [
               ClipRRect(
@@ -241,51 +271,51 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        event.title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      Text(event.title,
+                          style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text(
-                        '📅 ${_formatDate(event.datetime)}',
-                        style: const TextStyle(fontSize: 14),
-                      ),
+                      Text('📅 ${_formatDate(event.datetime)}',
+                          style:
+                              const TextStyle(fontSize: 14)),
                       const SizedBox(height: 4),
-                      Text(
-                        '📍 ${event.location}',
-                        style: const TextStyle(fontSize: 14),
-                      ),
+                      Text('📍 ${event.location}',
+                          style:
+                              const TextStyle(fontSize: 14)),
                       const SizedBox(height: 24),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
                         children: [
                           ElevatedButton(
-                            onPressed:
-                                () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (_) => EventDetailsScreen(event: event),
-                                  ),
-                                ),
+                            onPressed: () =>
+                                Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    EventDetailsScreen(
+                                        event: event),
+                              ),
+                            ),
                             child: const Text('See details'),
                           ),
                           FutureBuilder<List<Map<String, dynamic>>>(
-                            future: AttendanceApi().getAttendanceByEvent(
-                              event.id!,
-                            ),
+                            future: AttendanceApi()
+                                .getAttendanceByEvent(
+                                    event.id!),
                             builder: (ctx, snap) {
-                              if (!snap.hasData) return const SizedBox();
-                              final goingCount =
-                                  snap.data!
-                                      .where((a) => a['status'] == 'going')
-                                      .length;
+                              if (!snap.hasData)
+                                return const SizedBox();
+                              final goingCount = snap.data!
+                                  .where((a) =>
+                                      a['status'] == 'going')
+                                  .length;
                               return Row(
                                 children: [
-                                  const Icon(Icons.people, color: Colors.grey),
+                                  const Icon(
+                                      Icons.people,
+                                      color: Colors.grey),
                                   const SizedBox(width: 4),
                                   Text('$goingCount going'),
                                 ],
@@ -301,8 +331,6 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
             ],
           ),
         ),
-
-        // Heart toggle
         Positioned(
           top: 12,
           right: 32,
@@ -319,37 +347,16 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
     );
   }
 
-  void _attendEvent() async {
-    if (userId == null || currentIndex >= events.length) return;
-    final currentEvent = events[currentIndex];
-    final success = await AttendanceApi().addAttendance(
-      userId: userId!,
-      eventId: currentEvent.id!,
-      status: "going",
-    );
-    if (success) {
-      setState(() {
-        events.removeAt(currentIndex);
-        if (currentIndex >= events.length) currentIndex = 0;
-      });
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to add attendance')));
-    }
-  }
-
-  void _rejectEvent() {
-    if (currentIndex < events.length) {
-      setState(() {
-        events.removeAt(currentIndex);
-        if (currentIndex >= events.length) currentIndex = 0;
-      });
-    }
-  }
-
   String _formatDate(DateTime dt) {
-    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const weekdays = [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun'
+    ];
     const months = [
       'Jan',
       'Feb',
@@ -362,7 +369,7 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
       'Sep',
       'Oct',
       'Nov',
-      'Dec',
+      'Dec'
     ];
     final w = weekdays[(dt.weekday - 1) % 7];
     final m = months[(dt.month - 1) % 12];
@@ -371,22 +378,18 @@ class _ExploreScreenState extends State<ExploreScreen> with RouteAware {
     return '$w, $m ${dt.day} · $hh:$mm';
   }
 
-  Widget _buildCircleButton(
-    String emoji, {
-    double size = 48,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildCircleButton(String emoji,
+      {double size = 48, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: size,
         height: size,
         decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-        ),
+            color: Colors.white, shape: BoxShape.circle),
         alignment: Alignment.center,
-        child: Text(emoji, style: const TextStyle(fontSize: 24)),
+        child:
+            Text(emoji, style: const TextStyle(fontSize: 24)),
       ),
     );
   }
