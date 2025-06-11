@@ -1,7 +1,7 @@
 class User {
   final int id;
   final String name;
-  final String passwordHash;
+  final String? passwordHash;
   final DateTime createdAt;
   final String email;
   final String role;
@@ -9,7 +9,7 @@ class User {
   User({
     required this.id,
     required this.name,
-    required this.passwordHash,
+    this.passwordHash,
     required this.createdAt,
     required this.email,
     required this.role,

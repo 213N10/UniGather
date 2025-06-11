@@ -14,6 +14,7 @@ import 'models/event.dart';
 import 'models/like.dart';
 import 'screens/likedEvents/LikedEventsScreen.dart';
 
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 const MaterialColor uniRed = MaterialColor(_uniRedPrimaryValue, <int, Color>{
   50: Color(0xFFF3CCCC),
@@ -30,11 +31,11 @@ const MaterialColor uniRed = MaterialColor(_uniRedPrimaryValue, <int, Color>{
 const int _uniRedPrimaryValue = 0xFFE00000;
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -50,9 +51,10 @@ class MyApp extends StatelessWidget {
         '/explore': (context) => const ExploreScreen(),
         '/nearby': (context) => const NearbyScreen(),
         '/create': (context) => const CreateEventScreen(),
-        '/liked'  : (ctx) => const LikedEventsScreen(),
+        '/liked': (ctx) => const LikedEventsScreen(),
         '/friends': (ctx) => const FriendsScreen(),
       },
+      navigatorObservers: [routeObserver],
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/profile':

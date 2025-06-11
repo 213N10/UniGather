@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:unigather_frontend/services/auth_service.dart';
 import 'package:unigather_frontend/widgets/bottom_nav_bar.dart';
 
 import '../../api/event_api.dart';
@@ -212,26 +213,37 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
   void _submitForm() async {
     if (_formKey.currentState!.validate() && _selectedDateTime != null) {
-      final event = Event(
-        title: _titleController.text,
-        description: _descController.text,
-        location: _locationController.text,
-        datetime: _selectedDateTime!,
-        visibility: _visibilityController.text,
-        createdBy: 3, // TODO: Replace with actual user ID
-      );
+      if (_formKey.currentState!.validate() && _selectedDateTime != null) {
+        final userId = await AuthService.getCurrentUserId();
 
-      try {
-        await EventApi.createEvent(event);
+        if (userId == null) {
+          // Handle user not logged in case here
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('User not logged in!')));
+          return;
+        }
+        final event = Event(
+          title: _titleController.text,
+          description: _descController.text,
+          location: _locationController.text,
+          datetime: _selectedDateTime!,
+          visibility: _visibilityController.text,
+          createdBy: userId,
+        );
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Event created!')));
-        Navigator.pushNamed(context, '/explore');
-      } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to create event: $e')));
+        try {
+          await EventApi.createEvent(event);
+
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Event created!')));
+          Navigator.pushNamed(context, '/explore');
+        } catch (e) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to create event: $e')));
+        }
       }
     }
   }
