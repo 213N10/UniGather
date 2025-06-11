@@ -1,38 +1,39 @@
-# UniGather
+
+# UniGather  
 # 🚀 UniGather App: Local Launch and Testing Guide
 
-Ten przewodnik opisuje kroki potrzebne do lokalnego uruchomienia i testowania aplikacji **UniGather**. Postępuj zgodnie z instrukcjami poniżej.
+This guide outlines the steps required to run and test the **UniGather** application locally. Follow the instructions below.
 
 ---
 
-## 1. 🛠️ Konfiguracja bazy danych (PostgreSQL)
+## 1. 🛠️ Database Setup (PostgreSQL)
 
-Aplikacja korzysta z bazy danych PostgreSQL.
+The application uses a PostgreSQL database.
 
-### Kroki:
+### Steps:
 
-#### 🔸 Zainstaluj PostgreSQL
-Pobierz i zainstaluj PostgreSQL dla swojego systemu operacyjnego:  
+#### 🔸 Install PostgreSQL  
+Download and install PostgreSQL for your operating system:  
 👉 [https://www.postgresql.org/download/](https://www.postgresql.org/download/)
 
-#### 🔸 Utwórz użytkownika `postgres` i ustaw hasło
+#### 🔸 Create the `postgres` user and set the password
 
-W terminalu lub narzędziu pgAdmin wykonaj następujące polecenia (może być wymagane połączenie jako superużytkownik):
+In your terminal or pgAdmin, execute the following commands (you may need superuser privileges):
 
 ```sql
 CREATE USER postgres WITH PASSWORD '0000';
 ALTER USER postgres WITH SUPERUSER;
 ```
 
-#### 🔸 Utwórz bazę danych `uni_gather`
+#### 🔸 Create the `uni_gather` database
 
 ```sql
 CREATE DATABASE uni_gather OWNER postgres;
 ```
 
-#### 🔸 Uruchom skrypt SQL
+#### 🔸 Run the SQL script
 
-Przejdź do katalogu zawierającego plik `uniGather.sql` i uruchom:
+Navigate to the directory containing the `uniGather.sql` file and run:
 
 ```bash
 psql -U postgres -d uni_gather -f uniGather.sql
@@ -40,76 +41,76 @@ psql -U postgres -d uni_gather -f uniGather.sql
 
 ---
 
-## 2. ⚙️ Konfiguracja backendu (FastAPI)
+## 2. ⚙️ Backend Setup (FastAPI)
 
-Backend aplikacji działa na frameworku **FastAPI**.
+The backend of the application uses the **FastAPI** framework.
 
-### Kroki:
+### Steps:
 
-#### 🔸 Przejdź do folderu backendu:
+#### 🔸 Navigate to the backend folder:
 
 ```bash
 cd unigather_backend
 ```
 
-#### 🔸 Zainstaluj zależności Pythona:
+#### 🔸 Install Python dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-#### 🔸 Uruchom serwer backendu:
+#### 🔸 Start the backend server:
 
 ```bash
 fastapi dev main.py
 ```
 
-Backend powinien być dostępny pod adresem: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+The backend should be available at: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
 ---
 
-## 3. 📱 Konfiguracja frontendu (Flutter)
+## 3. 📱 Frontend Setup (Flutter)
 
-Frontend to aplikacja Flutter.
+The frontend is a Flutter application.
 
-### Kroki:
+### Steps:
 
-#### 🔸 Zainstaluj Flutter
+#### 🔸 Install Flutter
 
-👉 [Oficjalna instrukcja instalacji Fluttera](https://flutter.dev/docs/get-started/install)
+👉 [Official Flutter installation guide](https://flutter.dev/docs/get-started/install)
 
-#### 🔸 Skonfiguruj emulator Androida
+#### 🔸 Set up Android emulator
 
-1. Zainstaluj **Android Studio**.
-2. Otwórz **Device Manager** (lub **AVD Manager**).
-3. Utwórz nowe urządzenie wirtualne (rekomendowany: **Pixel 5**).
-4. Uruchom emulator.
+1. Install **Android Studio**.  
+2. Open **Device Manager** (or **AVD Manager**).  
+3. Create a new virtual device (recommended: **Pixel 5**).  
+4. Launch the emulator.
 
-#### 🔸 Przejdź do folderu frontendu:
+#### 🔸 Navigate to the frontend folder:
 
 ```bash
 cd unigather_frontend
 ```
 
-#### 🔸 Uruchom aplikację Flutter:
+#### 🔸 Run the Flutter app:
 
 ```bash
 flutter run
 ```
 
-To zbuduje aplikację i zainstaluje ją na emulatorze. Pierwsze uruchomienie może potrwać kilka minut.
+This will build and install the app on the emulator. The first launch may take a few minutes.
 
 ---
 
-## 4. 📦 Dodatkowe zależności
+## 4. 📦 Additional Dependencies
 
-Podczas `flutter run` lub `pip install` mogą pojawić się komunikaty o brakujących pakietach lub komponentach SDK. Postępuj zgodnie z instrukcjami narzędzi, aby zainstalować brakujące zależności.
+During `flutter run` or `pip install`, you may encounter messages about missing packages or SDK components. Follow the tools’ instructions to install any missing dependencies.
 
 ---
 
-## 5. ✅ Weryfikacja
+## 5. ✅ Verification
 
-Jeśli backend (FastAPI) i frontend (Flutter) są poprawnie uruchomione:
+If both the backend (FastAPI) and frontend (Flutter) are running properly:
 
-- Na emulatorze Pixel 5 powinna pojawić się aplikacja UniGather.
-- Możesz rozpocząć testowanie działania aplikacji.
+- The UniGather app should appear on the Pixel 5 emulator.
+- You can begin testing the app functionality.
