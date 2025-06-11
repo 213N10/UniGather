@@ -45,7 +45,7 @@ class Events(Base):
     created_at = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
 
     users: Mapped[Optional['Users']] = relationship('Users', back_populates='events')
-    attendance: Mapped[List['Attendance']] = relationship('Attendance', uselist=True, back_populates='event')
+    attendance: Mapped[List['Attendance']] = relationship('Attendance', uselist=True, back_populates='event', cascade="all, delete-orphan")
     comments: Mapped[List['Comments']] = relationship('Comments', uselist=True, back_populates='event')
     media: Mapped[List['Media']] = relationship('Media', uselist=True, back_populates='event')
 
@@ -80,7 +80,7 @@ class Attendance(Base):
     status = mapped_column(String(20), server_default=text("'interested'::character varying"))
     timestamp = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
 
-    event: Mapped['Events'] = relationship('Events', back_populates='attendance')
+    event: Mapped['Events'] = relationship('Events', back_populates='attendance', passive_deletes=True)
     user: Mapped['Users'] = relationship('Users', back_populates='attendance')
 
 
@@ -98,8 +98,8 @@ class Comments(Base):
     user_id = mapped_column(Integer)
     created_at = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
 
-    event: Mapped[Optional['Events']] = relationship('Events', back_populates='comments')
-    user: Mapped[Optional['Users']] = relationship('Users', back_populates='comments')
+    event: Mapped[Optional['Events']] = relationship('Events', back_populates='comments', passive_deletes=True)
+    user: Mapped[Optional['Users']] = relationship('Users', back_populates='comments', passive_deletes=True)
 
 
 class Media(Base):
@@ -117,8 +117,8 @@ class Media(Base):
     type = mapped_column(String(20))
     uploaded_at = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
 
-    event: Mapped[Optional['Events']] = relationship('Events', back_populates='media')
-    user: Mapped[Optional['Users']] = relationship('Users', backref='media_files')
+    event: Mapped[Optional['Events']] = relationship('Events', back_populates='media', passive_deletes=True)
+    user: Mapped[Optional['Users']] = relationship('Users', backref='media_files', passive_deletes=True)
 
 
 
@@ -134,5 +134,5 @@ class Likes(Base):
     event_id = mapped_column(Integer, nullable=False)
     created_at = mapped_column(DateTime, server_default=text('CURRENT_TIMESTAMP'))
 
-    user: Mapped['Users'] = relationship('Users', backref='liked_events')
-    event: Mapped['Events'] = relationship('Events', backref='liked_by')
+    user: Mapped['Users'] = relationship('Users', backref='liked_events', passive_deletes=True)
+    event: Mapped['Events'] = relationship('Events', backref='liked_by', passive_deletes=True)
